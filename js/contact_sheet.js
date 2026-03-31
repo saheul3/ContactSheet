@@ -383,9 +383,10 @@ function previewDraw() {
         let url = URL.createObjectURL(blob);
         fsimg.src = url;
 
-        fsimg.onload = function() {
-            URL.revokeObjectURL(url);
-        };
+        // to make preview downloadable
+        // fsimg.onload = function() {
+        //     URL.revokeObjectURL(url);
+        // };
     });
     fs.remove();
     fsimg.style.display = 'block';
@@ -397,9 +398,10 @@ function previewDraw() {
         let url = URL.createObjectURL(blob);
         csimg.src = url;
 
-        csimg.onload = function() {
-            URL.revokeObjectURL(url);
-        };
+        // to make contact sheet downloadable
+        // csimg.onload = function() {
+        //     URL.revokeObjectURL(url);
+        // };
     });
     cs.remove();
     csimg.style.display = 'block';
