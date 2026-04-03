@@ -1017,6 +1017,50 @@ const FILM = {
         'enabled': false,
         'dx_code': '854011',
     },
+    'kodak-vision3-500t': {
+        'name': 'Kodak Vision3 500T',
+        'icon': 'kodakvision3500t_icon.png',
+        'enabled': true,
+        'dx_code': -1,
+        'start_frame': 1,
+        // Top edge: manufacturing info sequence (VCD_OSD_MONO, one field per frame, repeating every 8)
+        // Based on: — EASTMAN   5219   021   2301   23   174   2022   —   -
+        'top_elements': [
+            { 'type': ElementType.LABEL, 'text': '\u2014EASTMAN', 'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 0.0 },
+            { 'type': ElementType.LABEL, 'text': '5219',         'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 1.0 },
+            { 'type': ElementType.LABEL, 'text': '021',          'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 2.0 },
+            { 'type': ElementType.LABEL, 'text': '2301',         'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 3.0 },
+            { 'type': ElementType.LABEL, 'text': '23',           'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 4.0 },
+            { 'type': ElementType.LABEL, 'text': '174',          'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 5.0 },
+            { 'type': ElementType.LABEL, 'text': '2022',         'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 6.0 },
+            { 'type': ElementType.LABEL, 'text': '\u2014',       'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 7.2 },
+        ],
+        // Bottom edge: KeyCode format (EN 19 [batch] [keynum]+[offset] •) + film name
+        // Based on: EN 05 9635 6613+32 •   [barcode]   VISION3 500T  5219
+        'bottom_elements': [
+            // KeyCode prefix: KK 19 [batch]   (every 8 frames)
+            { 'type': ElementType.LABEL, 'text': 'KK 19  9635', 'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.0, 'margin_mm': 0.5, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 0.0 },
+            // Frame key number (increments per frame)
+            { 'type': ElementType.FRAME_COUNT, 'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.0, 'margin_mm': 0.5, 'repeat': RepeatType.FRAME, 'offset': 2.2 },
+            // Zero-frame reference mark •
+            { 'type': ElementType.LABEL, 'text': '+32 \u2022', 'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.0, 'margin_mm': 0.5, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 3.0 },
+            // Film name + density patch (every 8 frames, offset 4)
+            { 'type': ElementType.LABEL, 'text': 'VISION3 500T  5219', 'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.0, 'margin_mm': 0.5, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 4.0 },
+            // Arrow (film direction)
+            {
+                'type': ElementType.ARROW,
+                'color': '#e8621a',
+                'margin_mm': 0.32,
+                'offset': 0.882,
+                'head_width_mm': 1.43,
+                'head_height_mm': 0.55,
+                'has_tail': true,
+                'tail_width_mm': 2.34,
+                'tail_height_mm': 0.2,
+            },
+        ],
+        'sprocket_hole_color': '#c24a10',
+    },
     'kodak-portra-400-120': {
         'name': 'Kodak Portra 400',
         'icon': 'kodakportra400_120_icon.png',

@@ -171,6 +171,34 @@ function renderTopImage(fs, element) {
 }
 
 function renderBottomLabel(fs, element) {
+    fs.fill(element.color);
+    fs.noStroke();
+    fs.textSize(element.height_mm * SCALE);
+    fs.textAlign(LEFT, BOTTOM);
+    fs.textFont(FONTS_CACHE[element.font]);
+    fs.push();
+    fs.translate(element.offset * CYCLE_W, fs.height - element.margin_mm * SCALE);
+
+    let interval_px = CYCLE_W;
+    if (element.repeat === RepeatType.DISTANCE && 'interval_mm' in element) {
+        interval_px = element.interval_mm * SCALE;
+    }
+    if (element.repeat === RepeatType.FRAME && 'every' in element) {
+        interval_px = element.every * CYCLE_W;
+    }
+
+    if (element.font_style) {
+        fs.textStyle(element.font_style === 'bold' ? BOLD : element.font_style === 'italic' ? ITALIC : NORMAL);
+    }
+
+    if (element.repeat === RepeatType.NONE) {
+        fs.text(element.text, 0, 0);
+    } else {
+        for (let x = 0; x < fs.width; x += interval_px) {
+            fs.text(element.text, x, 0);
+        }
+    }
+    fs.pop();
 }
 
 function renderTopElements(fs, film_properties) {
