@@ -4,6 +4,11 @@
 const PREVIEW_HEIGHT = 600;
 const FINAL_HEIGHT = 200;
 
+// 120 film output resolution: 12 px/mm ≈ 305 DPI.
+// Defined as the rendered pixel height of the full 60mm film width
+// (56mm image + 2mm edge top + 2mm edge bottom).
+const FINAL_HEIGHT_120 = 720;
+
 // physical film dimensions in mm
 const SHOT_WIDTH_MM = 36;
 const SHOT_HEIGHT_MM = 24;
@@ -65,6 +70,16 @@ const RepeatType = {
     NONE: 'none',
     FRAME: 'frame',
     DISTANCE: 'distance'
+};
+
+// 120 medium format frame widths in mm (along the film direction)
+// Per-frame pitch along the film (image height + 2mm edge top + 2mm edge bottom).
+// e.g. 6x6: 56mm image + 4mm edges = 60mm pitch.
+const MEDIUM_FORMAT_WIDTHS_MM = {
+    '6x4.5': 46,   // 42 + 4
+    '6x6':   60,   // 56 + 4
+    '6x7':   73.5, // 69.5 + 4
+    '6x9':   88,   // 84 + 4
 };
 
 // create a dictionary of film stock properties
@@ -1002,6 +1017,88 @@ const FILM = {
         'enabled': false,
         'dx_code': '854011',
     },
+    'kodak-portra-400-120': {
+        'name': 'Kodak Portra 400',
+        'icon': 'kodakportra400_120_icon.png',
+        'enabled': true,
+        'format': '120',
+        'medium_format': '6x6',
+        'dx_code': -1,
+        'start_frame': 1,
+        'side_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'KODAK PORTRA 400',
+                'label_code': 'EI 400',
+                'side': 'left',
+                'font': FONTS.sans,
+                'font_style': 'bold',
+                'color': '#dcaf7b',
+                'height_mm': 1.5,
+                'repeat': RepeatType.FRAME,
+            },
+            {
+                'type': ElementType.FRAME_COUNT,
+                'side': 'right',
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.4,
+                'margin_mm': 0.5,
+                'repeat': RepeatType.FRAME,
+            },
+            {
+                'type': ElementType.ARROW,
+                'side': 'right',
+                'color': '#dcaf7b',
+                'height_mm': 3.5,
+                'width_mm': 1.5,
+                'margin_mm': 2.0,
+                'repeat': RepeatType.FRAME,
+            },
+        ],
+        'sprocket_hole_color': '#b49342',
+    },
+    'ilf-hp5-400-120': {
+        'name': 'Ilford HP5 400',
+        'icon': 'ilfordhp5plus400_120_icon.png',
+        'enabled': true,
+        'format': '120',
+        'medium_format': '6x6',
+        'dx_code': -1,
+        'bw': true,
+        'start_frame': 1,
+        'side_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'ILFORD HP5 PLUS',
+                'label_code': '400',
+                'side': 'left',
+                'font': FONTS.vcd,
+                'color': '#eee',
+                'height_mm': 1.5,
+                'repeat': RepeatType.FRAME,
+            },
+            {
+                'type': ElementType.FRAME_COUNT,
+                'side': 'right',
+                'font': FONTS.vcd,
+                'color': '#eee',
+                'height_mm': 1.4,
+                'margin_mm': 0.5,
+                'repeat': RepeatType.FRAME,
+            },
+            {
+                'type': ElementType.ARROW,
+                'side': 'right',
+                'color': '#eee',
+                'height_mm': 3.5,
+                'width_mm': 1.5,
+                'margin_mm': 2.0,
+                'repeat': RepeatType.FRAME,
+            },
+        ],
+        'sprocket_hole_color': '#888',
+    },
     'unknown': {
         'name': 'Unknown',
         'icon': 'unknown_roll_icon.png',
@@ -1064,39 +1161,49 @@ const FILM = {
 }
 
 function populateFilmStocks() {
-    let filmstockContainer = document.getElementById('filmSelect');
+    const filmstockContainer = document.getElementById('filmSelect');
     filmstockContainer.innerHTML = "";
 
+    // Use an array to preserve 35mm-first order (plain object keys like '120'
+    // get sorted as integer indices by JS engines, putting them before '35mm').
+    const groups = [
+        { label: '35mm', keys: [] },
+        { label: '120',  keys: [] },
+    ];
+    const groupOf = key => FILM[key].format === '120' ? groups[1] : groups[0];
     for (let key in FILM) {
-        let filmstock = FILM[key];
-        if (!filmstock.enabled) {
-            continue;
-        }
+        const fs = FILM[key];
+        if (!fs.enabled) continue;
+        groupOf(key).keys.push(key);
+    }
 
-        let filmstock_el = document.createElement('div');
-        let icon = filmstock.icon;
-        let name = filmstock.name;
-        filmstock_el.classList.add('filmstock');
-        if (filmstock.active) {
-            filmstock_el.classList.add('active');
-        }
+    for (const { label: groupName, keys } of groups) {
+        if (keys.length === 0) continue;
 
-        filmstock_el.id = key;
+        const header = document.createElement('p');
+        header.textContent = groupName;
+        header.style.cssText = 'width:100%; margin:4px 0 2px; font-size:11px; color:#888; border-bottom:1px solid #888; padding-bottom:2px;';
+        filmstockContainer.appendChild(header);
 
-        filmstock_el.innerHTML = `
-        <img src="img/filmrolls/${icon}" alt="${name}">
-        <p>${name}</p>
-        `;
+        const row = document.createElement('div');
+        row.classList.add('filmStockRow');
 
-        if (filmstock.enabled) {
+        for (const key of keys) {
+            const filmstock = FILM[key];
+            const filmstock_el = document.createElement('div');
+            filmstock_el.classList.add('filmstock');
+            if (filmstock.active) filmstock_el.classList.add('active');
+            filmstock_el.id = key;
+            filmstock_el.innerHTML = `
+                <img src="img/filmrolls/${filmstock.icon}" alt="${filmstock.name}">
+                <p>${filmstock.name}</p>
+            `;
             filmstock_el.addEventListener('click', function() {
                 selectFilmStock(key);
             });
-        } else {
-            filmstock_el.classList.add('disabled');
-        
+            row.appendChild(filmstock_el);
         }
 
-        filmstockContainer.appendChild(filmstock_el);
+        filmstockContainer.appendChild(row);
     }
 }

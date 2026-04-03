@@ -23,9 +23,19 @@ function reset() {
     document.getElementById("upload").classList.add("hidden");
     document.getElementById("uploadProgress").classList.add("hidden");
     document.getElementById("imagePreviewWindow").classList.add("hidden");
+    document.getElementById("filmSelectWindow").classList.add("hidden");
     document.getElementById("filmstripPreviewWindow").classList.add("hidden");
     document.getElementById("contactSheetWindow").classList.add("hidden");
     document.getElementById("todoWindow").classList.add("hidden");
+}
+
+function showFilmSelect() {
+    document.getElementById("imagePreviewWindow").classList.add("hidden");
+    document.getElementById("filmSelectWindow").classList.remove("hidden");
+}
+
+function hideFilmSelect() {
+    document.getElementById("filmSelectWindow").classList.add("hidden");
 }
 
 function startLoad() {
@@ -61,6 +71,8 @@ function selectFilmStock(select_id) {
         buttons[i].classList.remove("active");
     }
     document.getElementById(select_id).classList.add("active");
+    const is120 = FILM[select_id] && FILM[select_id].format === '120';
+    document.getElementById('film120Options').classList.toggle('hidden', !is120);
 }
 
 // MARK: js check if document is ready

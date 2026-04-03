@@ -58,18 +58,18 @@ layout: default
 
         <section class="field-row">
             <button id="imagePreviewCancel" onclick="reset()">Start Over</button>
-            <button id="imagePreviewProceed" onclick="showFilmstrip()">Continue</button>
+            <button id="imagePreviewProceed" onclick="showFilmSelect()">Continue</button>
         </section>
     </div>
 </div>
 
-<div class="window" id="filmSelectWindow">
+<div class="window hidden" id="filmSelectWindow">
     <div class="title-bar">
         <div class="title-bar-text">Filmstrip Settings</div>
             <div class="title-bar-controls">
             <button aria-label="Minimize"></button>
             <button aria-label="Maximize"></button>
-            <button onclick="hideFilmstrip()" aria-label="Close"></button>
+            <button onclick="hideFilmSelect()" aria-label="Close"></button>
         </div>
     </div>
     <div class="window-body">
@@ -79,6 +79,13 @@ layout: default
                 <p>No rolls loaded</p>
             </div>
         </div>
+        <div id="film120Options" class="hidden" style="padding: 4px 0;">
+            <label for="film120Date" style="font-size:11px;">Film code</label><br>
+            <input type="text" id="film120Date" placeholder="e.g. 0303" style="width:100%; font-size:11px;">
+        </div>
+        <section style="text-align: right; padding-top: 4px;">
+            <button onclick="showFilmstrip()">Continue</button>
+        </section>
     </div>
 </div>
 
