@@ -280,6 +280,50 @@ function renderBottomArrow(fs, element) {
     fs.pop();
 }
 
+/**
+ * Renders a cinema KeyCode mark: human-readable text + ITF barcode.
+ * Repeats every `interval_frames` (default 16 = 1 foot of film).
+ * Layout matches: EN 05 9635 6613+32 •   [barcode]
+ */
+function renderKeyCode(fs, element, start_frame) {
+    const interval_frames = element.interval_frames || 16;
+    const interval_px = interval_frames * CYCLE_W;
+    const base_key  = element.base_key  || 6613;
+    const roll      = element.roll      || 9635;
+    const film_type = element.film_type || '19';
+    const margin_y  = fs.height - element.margin_mm * SCALE;
+
+    fs.push();
+    fs.textFont(FONTS_CACHE[FONTS.vcd]);
+    fs.textSize(element.height_mm * SCALE);
+    fs.textAlign(LEFT, BOTTOM);
+    fs.noStroke();
+
+    let frame = start_frame;
+    for (let x = 0; x < fs.width; x += interval_px, frame += interval_frames) {
+        const key_feet    = base_key + Math.floor(frame / 16);
+        const perf_offset = (frame % 16) * 4;
+        const perf_str    = String(perf_offset).padStart(2, '0');
+
+        // "KK" in red (manufacturer prefix), rest in element color
+        fs.fill('#cc2200');
+        fs.text('KK', x, margin_y);
+        const kk_w = fs.textWidth('KK');
+
+        const rest = ` ${film_type}  ${roll}  ${key_feet}+${perf_str} \u2022`;
+        fs.fill(element.color);
+        fs.text(rest, x + kk_w, margin_y);
+
+        // ITF barcode after the text
+        const text_w = kk_w + fs.textWidth(rest);
+        const bc = drawKeyCodeBarcode(key_feet, perf_offset, roll, element.color);
+        const bc_h = element.height_mm * SCALE;
+        fs.image(bc, x + text_w + 3, margin_y - bc_h, bc.width * (bc_h / bc.height), bc_h);
+        bc.remove();
+    }
+    fs.pop();
+}
+
 function renderBottomElements(fs, film_properties) {
     for (let i = 0; i < film_properties.bottom_elements.length; i++) {
         let element = film_properties.bottom_elements[i];
@@ -293,6 +337,8 @@ function renderBottomElements(fs, film_properties) {
             renderDX(fs, element, film_properties.dx_code, film_properties.start_frame);
         } else if (element.type === ElementType.ARROW) {
             renderBottomArrow(fs, element);
+        } else if (element.type === ElementType.KEYCODE) {
+            renderKeyCode(fs, element, film_properties.start_frame);
         }
     }
 }

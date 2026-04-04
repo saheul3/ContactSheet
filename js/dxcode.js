@@ -160,3 +160,65 @@ function drawDX(dx, frameNum, color, debug=false) {
 
     return dxImage
 }
+
+// ── KeyCode (MR. CODE) barcode — Interleaved 2-of-5 (ITF) ────────────────────
+// Spec: ISO 4909 / SMPTE KeyCode. Encodes 10 digits using ITF.
+// Bars at even indices, spaces at odd indices (both drawn from element widths).
+const _ITF_ENC = [
+    [1,1,3,3,1], // 0: NNWWN
+    [3,1,1,1,3], // 1: WNNNW
+    [1,3,1,1,3], // 2: NWNNW
+    [3,3,1,1,1], // 3: WWNNN
+    [1,1,3,1,3], // 4: NNWNW
+    [3,1,3,1,1], // 5: WNWNN
+    [1,3,3,1,1], // 6: NWWNN
+    [1,1,1,3,3], // 7: NNNWW
+    [3,1,1,3,1], // 8: WNNWN
+    [1,3,1,3,1], // 9: NWNWN
+];
+
+/**
+ * Draws a KeyCode barcode (Interleaved 2-of-5) for cinema film.
+ * Encodes: roll(4) + key_feet(4) + perf_offset(2) = 10 digits.
+ * @param {number} key_feet - Key number in feet.
+ * @param {number} perf_offset - Perforation offset (0–60, increments of 4).
+ * @param {number} roll - Roll number (4 digits).
+ * @param {string} color - Bar color.
+ * @returns {p5.Graphics}
+ */
+function drawKeyCodeBarcode(key_feet, perf_offset, roll, color) {
+    const N = 6, W = 15;  // narrow and wide bar widths in px
+    const h = 9;
+
+    const digits = (
+        String(roll % 10000).padStart(4, '0') +
+        String(key_feet % 10000).padStart(4, '0') +
+        String(perf_offset % 100).padStart(2, '0')
+    ).split('').map(Number);
+
+    // Build element array: [bar, space, bar, space, ...]
+    const elems = [N, N, N, N]; // start guard: bar, space, bar, space
+    for (let i = 0; i < digits.length; i += 2) {
+        const b = _ITF_ENC[digits[i]];
+        const s = _ITF_ENC[digits[i + 1]];
+        for (let j = 0; j < 5; j++) {
+            elems.push(b[j] === 1 ? N : W); // bar
+            elems.push(s[j] === 1 ? N : W); // space
+        }
+    }
+    elems.push(W, N, N); // stop guard: wide bar, narrow space, narrow bar
+
+    const totalWidth = elems.reduce((a, b) => a + b, 0);
+    const bc = createGraphics(totalWidth, h);
+    bc.background(0, 0);
+    bc.noStroke();
+    bc.fill(color);
+
+    let x = 0;
+    for (let i = 0; i < elems.length; i++) {
+        const w = elems[i];
+        if (i % 2 === 0) bc.rect(x, 0, w, h); // bars only
+        x += w;
+    }
+    return bc;
+}
