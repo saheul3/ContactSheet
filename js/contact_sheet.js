@@ -383,12 +383,12 @@ function renderCinemaEdge(fs, cinema) {
     // Deterministic pseudo-random
     function hashRand(seed) { let h = seed * 2654435761 >>> 0; return (h & 0xffff) / 0x10000; }
 
-    // The edge strip center-y (measured from top of filmstrip).
-    // Markings sit between the sprocket holes and the image area.
-    const strip_cy = SPROCKET_HOLE_MARGIN_MM * SCALE + SPROCKET_HOLE_HEIGHT_MM * SCALE + margin_mm * SCALE;
+    // y position: same as other top labels (margin_mm from top of filmstrip).
+    // This sits above the sprocket holes, in the narrow top edge strip.
+    const strip_cy = margin_mm * SCALE + reg_size * 0.5;
 
     // All rendering is done rotated 180° — text reads upside-down on the top edge.
-    // We flip the entire coordinate system: origin at (width, strip_cy*2), rotated PI.
+    // Flip the coordinate system around the strip center line.
     fs.push();
     fs.translate(fs.width, strip_cy * 2);
     fs.rotate(PI);
