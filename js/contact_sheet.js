@@ -286,6 +286,80 @@ function renderBottomArrow(fs, element) {
 // Each half: 5× frame-index dashes → barcode → key number text.
 // Foot boundary = regular-size key number; mid-foot = smaller text with "+32".
 // Bottom edge: blank. Markings on top edge only.
+// Text is printed upside-down (rotated 180°) on the top edge.
+
+// Helper: draw a frame-index dash mark (horizontal line)
+function _cinemaDash(fs, cx, cy, w, h) {
+    fs.rectMode(CENTER);
+    fs.rect(cx, cy, w, h);
+    fs.rectMode(CORNER);
+}
+
+// Helper: draw a filled circle (bullet ●)
+function _cinemaDot(fs, cx, cy, r) {
+    fs.ellipse(cx, cy, r * 2, r * 2);
+}
+
+// Helper: draw an up-arrow ↑ (points toward frame area = downward in flipped space)
+function _cinemaArrow(fs, cx, cy, size) {
+    const hw = size * 0.35;
+    const hh = size * 0.5;
+    fs.triangle(cx, cy - hh, cx - hw, cy + hh, cx + hw, cy + hh);
+}
+
+// Helper: draw matching check symbols using basic shapes
+function _cinemaCheckSym(fs, idx, cx, cy, size) {
+    const s = size * 0.4;
+    switch (idx) {
+        case 0: // # — hash: two horizontal + two vertical lines
+            fs.strokeWeight(size * 0.08);
+            fs.stroke(fs._renderer.drawingContext.fillStyle);
+            fs.line(cx - s, cy - s*0.4, cx + s, cy - s*0.4);
+            fs.line(cx - s, cy + s*0.4, cx + s, cy + s*0.4);
+            fs.line(cx - s*0.4, cy - s, cx - s*0.4, cy + s);
+            fs.line(cx + s*0.4, cy - s, cx + s*0.4, cy + s);
+            fs.noStroke();
+            break;
+        case 1: // > — right arrow
+            fs.triangle(cx + s, cy, cx - s, cy - s, cx - s, cy + s);
+            break;
+        case 2: // ▽ — down triangle (outline)
+            fs.strokeWeight(size * 0.08);
+            fs.stroke(fs._renderer.drawingContext.fillStyle);
+            fs.noFill();
+            fs.triangle(cx, cy + s, cx - s, cy - s, cx + s, cy - s);
+            fs.fill(fs._renderer.drawingContext.strokeStyle);
+            fs.noStroke();
+            break;
+        case 3: // △ — up triangle (outline)
+            fs.strokeWeight(size * 0.08);
+            fs.stroke(fs._renderer.drawingContext.fillStyle);
+            fs.noFill();
+            fs.triangle(cx, cy - s, cx - s, cy + s, cx + s, cy + s);
+            fs.fill(fs._renderer.drawingContext.strokeStyle);
+            fs.noStroke();
+            break;
+        case 4: // ✱ — asterisk: 3 lines crossing at center
+            fs.strokeWeight(size * 0.08);
+            fs.stroke(fs._renderer.drawingContext.fillStyle);
+            for (let a = 0; a < 3; a++) {
+                const ang = a * PI / 3;
+                fs.line(cx - s*cos(ang), cy - s*sin(ang), cx + s*cos(ang), cy + s*sin(ang));
+            }
+            fs.noStroke();
+            break;
+        case 5: // $
+            fs.textSize(size);
+            fs.textAlign(CENTER, CENTER);
+            fs.text('$', cx, cy);
+            break;
+        case 6: // ■ — filled square
+            fs.rectMode(CENTER);
+            fs.rect(cx, cy, s*1.6, s*1.6);
+            fs.rectMode(CORNER);
+            break;
+    }
+}
 
 function renderCinemaEdge(fs, cinema) {
     const perf_px = (SPROCKET_HOLE_WIDTH_MM + SPROCKET_HOLE_SPACING_WIDTH_MM) * SCALE;
@@ -293,10 +367,11 @@ function renderCinemaEdge(fs, cinema) {
     const half_px = 32 * perf_px;
 
     const col       = cinema.color || '#e8621a';
-    const text_y    = (cinema.margin_mm || 0.3) * SCALE;
+    const margin_mm = cinema.margin_mm || 0.3;
     const reg_size  = (cinema.height_mm || 1.1) * SCALE;
     const mid_size  = reg_size * 0.75;
-    const dash_size = reg_size;
+    const dash_w    = perf_px * 0.6;
+    const dash_h    = reg_size * 0.15;
     const bc_h      = reg_size;
 
     const mfg       = cinema.mfg_code  || 'E';
@@ -305,18 +380,23 @@ function renderCinemaEdge(fs, cinema) {
     const roll      = cinema.roll       || '0674';
     const base_key  = cinema.base_key   || 6613;
 
-    // Matching check symbols pool (randomly placed in dash groups)
-    const CHECK_SYMS = ['#', '>', '\u25BD', '\u25B3', '\u2731', '$', '\u25A0'];
-
-    // Seed-able pseudo-random (deterministic per foot)
+    // Deterministic pseudo-random
     function hashRand(seed) { let h = seed * 2654435761 >>> 0; return (h & 0xffff) / 0x10000; }
 
+    // The edge strip center-y (measured from top of filmstrip).
+    // Markings sit between the sprocket holes and the image area.
+    const strip_cy = SPROCKET_HOLE_MARGIN_MM * SCALE + SPROCKET_HOLE_HEIGHT_MM * SCALE + margin_mm * SCALE;
+
+    // All rendering is done rotated 180° — text reads upside-down on the top edge.
+    // We flip the entire coordinate system: origin at (width, strip_cy*2), rotated PI.
     fs.push();
+    fs.translate(fs.width, strip_cy * 2);
+    fs.rotate(PI);
+
     fs.fill(col);
     fs.noStroke();
-    fs.textFont(FONTS_CACHE[FONTS.vcd]);
+    fs.textFont(FONTS_CACHE[FONTS.sans]);
 
-    // Iterate through feet
     const total_feet = Math.ceil(fs.width / foot_px) + 1;
     for (let fi = 0; fi < total_feet; fi++) {
         const foot_x  = fi * foot_px;
@@ -325,59 +405,63 @@ function renderCinemaEdge(fs, cinema) {
         for (let half = 0; half < 2; half++) {
             const hx = foot_x + half * half_px;
 
-            // ─── Frame index marks: 5× dash at 4-perf intervals ───
-            fs.textSize(dash_size);
-            fs.textAlign(CENTER, TOP);
+            // ─── Frame index marks: 5× dash at 4-perf intervals (20 perfs) ───
             for (let d = 0; d < 5; d++) {
                 const dx = hx + d * 4 * perf_px;
                 if (dx < -perf_px || dx > fs.width + perf_px) continue;
-                fs.text('\u2013', dx, text_y); // en-dash
+                _cinemaDash(fs, dx, strip_cy, dash_w, dash_h);
             }
 
-            // Optional matching check symbols (1-2 per dash group, random positions)
+            // ─── Matching check symbols (1-2 per dash group, random) ───
             const seed = key_num * 2 + half;
             if (hashRand(seed) > 0.3) {
-                const sym_idx = Math.floor(hashRand(seed + 7) * CHECK_SYMS.length);
-                const dash_idx = Math.floor(hashRand(seed + 13) * 4); // between dash 0-3 and dash 1-4
-                const sym_x = hx + (dash_idx * 4 + 2) * perf_px;
+                const sym_idx  = Math.floor(hashRand(seed + 7) * 7);
+                const dash_idx = Math.floor(hashRand(seed + 13) * 4);
+                const sym_x    = hx + (dash_idx * 4 + 2) * perf_px;
                 if (sym_x > 0 && sym_x < fs.width) {
-                    fs.textSize(dash_size * 0.7);
-                    fs.text(CHECK_SYMS[sym_idx], sym_x, text_y);
+                    _cinemaCheckSym(fs, sym_idx, sym_x, strip_cy, reg_size);
+                    fs.fill(col); // restore fill after symbol drawing
+                    fs.noStroke();
                 }
             }
 
-            // ─── Barcode (MR. CODE): starts ~18.5 perfs in, ~5 perfs wide ───
-            const bc_x = hx + 18.5 * perf_px;
+            // ─── Barcode (MR. CODE): ~2.5 perfs after dashes, ~5 perfs wide ───
+            const bc_x = hx + 22.5 * perf_px;
             if (bc_x > -6 * perf_px && bc_x < fs.width + perf_px) {
                 const perf_offset = half * 32;
                 const bc = drawKeyCodeBarcode(key_num, perf_offset, parseInt(roll), col);
                 const bc_w = 5 * perf_px;
-                fs.image(bc, bc_x, text_y, bc_w, bc_h);
+                fs.image(bc, bc_x, strip_cy - bc_h * 0.5, bc_w, bc_h);
                 bc.remove();
             }
 
-            // ─── Key number text: starts ~24.5 perfs in ───
-            const key_x = hx + 24.5 * perf_px;
-            if (key_x > -10 * perf_px && key_x < fs.width + perf_px) {
-                fs.textAlign(LEFT, TOP);
+            // ─── Key number text: ~1 perf after barcode end ───
+            const key_x = hx + 28.5 * perf_px;
+            if (key_x > -12 * perf_px && key_x < fs.width + perf_px) {
+                fs.textAlign(LEFT, CENTER);
                 if (half === 0) {
-                    // Foot boundary: regular size
+                    // Foot boundary: regular size key number
                     fs.textSize(reg_size);
-                    fs.text(`${mfg}${fid} ${ftype} ${roll} ${key_num}\u25CF`, key_x, text_y);
+                    const txt = `${mfg}${fid} ${ftype} ${roll} ${key_num}`;
+                    fs.text(txt, key_x, strip_cy);
+                    // Bullet dot after text
+                    const tw = fs.textWidth(txt);
+                    _cinemaDot(fs, key_x + tw + reg_size * 0.4, strip_cy, reg_size * 0.15);
                 } else {
-                    // Mid-foot: smaller size with +32
+                    // Mid-foot: smaller text with +32
                     fs.textSize(mid_size);
-                    fs.text(`${mfg}${fid} ${ftype} ${roll} ${key_num}+32\u25CF`, key_x, text_y);
+                    const txt = `${mfg}${fid} ${ftype} ${roll} ${key_num}+32`;
+                    fs.text(txt, key_x, strip_cy);
+                    const tw = fs.textWidth(txt);
+                    _cinemaDot(fs, key_x + tw + mid_size * 0.4, strip_cy, mid_size * 0.12);
                 }
             }
 
             // ─── Zero-frame reference mark ↑ (every ~3rd foot, near regular key) ───
             if (half === 0 && fi % 3 === 0) {
-                const arrow_x = hx + 24 * perf_px;
+                const arrow_x = hx + 28 * perf_px;
                 if (arrow_x > 0 && arrow_x < fs.width) {
-                    fs.textSize(reg_size);
-                    fs.textAlign(CENTER, TOP);
-                    fs.text('\u2191', arrow_x, text_y);
+                    _cinemaArrow(fs, arrow_x, strip_cy, reg_size * 0.8);
                 }
             }
         }
