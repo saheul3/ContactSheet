@@ -1024,32 +1024,20 @@ const FILM = {
         'enabled': true,
         'dx_code': -1,
         'start_frame': 1,
-        // Top edge: manufacturing info sequence (VCD_OSD_MONO, one field per frame, repeating every 8)
-        // Based on: — EASTMAN   5219   021   2301   23   174   2022   —   -
-        'top_elements': [
-            { 'type': ElementType.LABEL, 'text': '\u2014EASTMAN', 'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 0.0 },
-            { 'type': ElementType.LABEL, 'text': '5219',         'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 1.0 },
-            { 'type': ElementType.LABEL, 'text': '021',          'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 2.0 },
-            { 'type': ElementType.LABEL, 'text': '2301',         'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 3.0 },
-            { 'type': ElementType.LABEL, 'text': '23',           'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 4.0 },
-            { 'type': ElementType.LABEL, 'text': '174',          'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 5.0 },
-            { 'type': ElementType.LABEL, 'text': '2022',         'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 6.0 },
-            { 'type': ElementType.LABEL, 'text': '\u2014',       'font': FONTS.vcd, 'color': '#e8621a', 'height_mm': 1.1, 'margin_mm': 0.25, 'repeat': RepeatType.FRAME, 'every': 8, 'offset': 7.2 },
-        ],
-        // Bottom edge: KeyCode (ITF barcode + human-readable)
-        // Based on reference: KK 19  9635  6613+32 •   [barcode]
-        'bottom_elements': [
-            {
-                'type': ElementType.KEYCODE,
-                'color': '#e8621a',
-                'height_mm': 1.0,
-                'margin_mm': 0.45,
-                'film_type': '19',
-                'roll': 9635,
-                'base_key': 6613,
-                'interval_frames': 16,
-            },
-        ],
+        // Cinema film: edge markings on top edge only, per KeyKode spec.
+        // Bottom edge blank. Rendering handled by renderCinemaEdge().
+        'cinema_edge': {
+            'color': '#e8621a',
+            'mfg_code': 'E',
+            'film_code': 'N',
+            'film_type': '19',      // last 2 digits of 5219
+            'roll': '0674',
+            'base_key': 6613,
+            'height_mm': 1.1,
+            'margin_mm': 0.3,
+        },
+        'top_elements': [],
+        'bottom_elements': [],
         'sprocket_hole_color': '#c24a10',
     },
     'kodak-portra-400-120': {

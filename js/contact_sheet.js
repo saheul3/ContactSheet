@@ -280,47 +280,109 @@ function renderBottomArrow(fs, element) {
     fs.pop();
 }
 
-/**
- * Renders a cinema KeyCode mark: human-readable text + ITF barcode.
- * Repeats every `interval_frames` (default 16 = 1 foot of film).
- * Layout matches: EN 05 9635 6613+32 •   [barcode]
- */
-function renderKeyCode(fs, element, start_frame) {
-    const interval_frames = element.interval_frames || 16;
-    const interval_px = interval_frames * CYCLE_W;
-    const base_key  = element.base_key  || 6613;
-    const roll      = element.roll      || 9635;
-    const film_type = element.film_type || '19';
-    const margin_y  = fs.height - element.margin_mm * SCALE;
+// ── Cinema film edge marking renderer ─────────────────────────────────────────
+// Based on Kodak Vision3 edge marking specification (ISO 4909 / KeyKode).
+// 1 foot = 64 perforations. Each foot has two halves (32 perfs each).
+// Each half: 5× frame-index dashes → barcode → key number text.
+// Foot boundary = regular-size key number; mid-foot = smaller text with "+32".
+// Bottom edge: blank. Markings on top edge only.
+
+function renderCinemaEdge(fs, cinema) {
+    const perf_px = (SPROCKET_HOLE_WIDTH_MM + SPROCKET_HOLE_SPACING_WIDTH_MM) * SCALE;
+    const foot_px = 64 * perf_px;
+    const half_px = 32 * perf_px;
+
+    const col       = cinema.color || '#e8621a';
+    const text_y    = (cinema.margin_mm || 0.3) * SCALE;
+    const reg_size  = (cinema.height_mm || 1.1) * SCALE;
+    const mid_size  = reg_size * 0.75;
+    const dash_size = reg_size;
+    const bc_h      = reg_size;
+
+    const mfg       = cinema.mfg_code  || 'E';
+    const fid       = cinema.film_code  || 'N';
+    const ftype     = cinema.film_type  || '19';
+    const roll      = cinema.roll       || '0674';
+    const base_key  = cinema.base_key   || 6613;
+
+    // Matching check symbols pool (randomly placed in dash groups)
+    const CHECK_SYMS = ['#', '>', '\u25BD', '\u25B3', '\u2731', '$', '\u25A0'];
+
+    // Seed-able pseudo-random (deterministic per foot)
+    function hashRand(seed) { let h = seed * 2654435761 >>> 0; return (h & 0xffff) / 0x10000; }
 
     fs.push();
-    fs.textFont(FONTS_CACHE[FONTS.vcd]);
-    fs.textSize(element.height_mm * SCALE);
-    fs.textAlign(LEFT, BOTTOM);
+    fs.fill(col);
     fs.noStroke();
+    fs.textFont(FONTS_CACHE[FONTS.vcd]);
 
-    let frame = start_frame;
-    for (let x = 0; x < fs.width; x += interval_px, frame += interval_frames) {
-        const key_feet    = base_key + Math.floor(frame / 16);
-        const perf_offset = (frame % 16) * 4;
-        const perf_str    = String(perf_offset).padStart(2, '0');
+    // Iterate through feet
+    const total_feet = Math.ceil(fs.width / foot_px) + 1;
+    for (let fi = 0; fi < total_feet; fi++) {
+        const foot_x  = fi * foot_px;
+        const key_num = base_key + fi;
 
-        // "KK" in red (manufacturer prefix), rest in element color
-        fs.fill('#cc2200');
-        fs.text('KK', x, margin_y);
-        const kk_w = fs.textWidth('KK');
+        for (let half = 0; half < 2; half++) {
+            const hx = foot_x + half * half_px;
 
-        const rest = ` ${film_type}  ${roll}  ${key_feet}+${perf_str} \u2022`;
-        fs.fill(element.color);
-        fs.text(rest, x + kk_w, margin_y);
+            // ─── Frame index marks: 5× dash at 4-perf intervals ───
+            fs.textSize(dash_size);
+            fs.textAlign(CENTER, TOP);
+            for (let d = 0; d < 5; d++) {
+                const dx = hx + d * 4 * perf_px;
+                if (dx < -perf_px || dx > fs.width + perf_px) continue;
+                fs.text('\u2013', dx, text_y); // en-dash
+            }
 
-        // ITF barcode after the text
-        const text_w = kk_w + fs.textWidth(rest);
-        const bc = drawKeyCodeBarcode(key_feet, perf_offset, roll, element.color);
-        const bc_h = element.height_mm * SCALE;
-        fs.image(bc, x + text_w + 3, margin_y - bc_h, bc.width * (bc_h / bc.height), bc_h);
-        bc.remove();
+            // Optional matching check symbols (1-2 per dash group, random positions)
+            const seed = key_num * 2 + half;
+            if (hashRand(seed) > 0.3) {
+                const sym_idx = Math.floor(hashRand(seed + 7) * CHECK_SYMS.length);
+                const dash_idx = Math.floor(hashRand(seed + 13) * 4); // between dash 0-3 and dash 1-4
+                const sym_x = hx + (dash_idx * 4 + 2) * perf_px;
+                if (sym_x > 0 && sym_x < fs.width) {
+                    fs.textSize(dash_size * 0.7);
+                    fs.text(CHECK_SYMS[sym_idx], sym_x, text_y);
+                }
+            }
+
+            // ─── Barcode (MR. CODE): starts ~18.5 perfs in, ~5 perfs wide ───
+            const bc_x = hx + 18.5 * perf_px;
+            if (bc_x > -6 * perf_px && bc_x < fs.width + perf_px) {
+                const perf_offset = half * 32;
+                const bc = drawKeyCodeBarcode(key_num, perf_offset, parseInt(roll), col);
+                const bc_w = 5 * perf_px;
+                fs.image(bc, bc_x, text_y, bc_w, bc_h);
+                bc.remove();
+            }
+
+            // ─── Key number text: starts ~24.5 perfs in ───
+            const key_x = hx + 24.5 * perf_px;
+            if (key_x > -10 * perf_px && key_x < fs.width + perf_px) {
+                fs.textAlign(LEFT, TOP);
+                if (half === 0) {
+                    // Foot boundary: regular size
+                    fs.textSize(reg_size);
+                    fs.text(`${mfg}${fid} ${ftype} ${roll} ${key_num}\u25CF`, key_x, text_y);
+                } else {
+                    // Mid-foot: smaller size with +32
+                    fs.textSize(mid_size);
+                    fs.text(`${mfg}${fid} ${ftype} ${roll} ${key_num}+32\u25CF`, key_x, text_y);
+                }
+            }
+
+            // ─── Zero-frame reference mark ↑ (every ~3rd foot, near regular key) ───
+            if (half === 0 && fi % 3 === 0) {
+                const arrow_x = hx + 24 * perf_px;
+                if (arrow_x > 0 && arrow_x < fs.width) {
+                    fs.textSize(reg_size);
+                    fs.textAlign(CENTER, TOP);
+                    fs.text('\u2191', arrow_x, text_y);
+                }
+            }
+        }
     }
+
     fs.pop();
 }
 
@@ -337,8 +399,6 @@ function renderBottomElements(fs, film_properties) {
             renderDX(fs, element, film_properties.dx_code, film_properties.start_frame);
         } else if (element.type === ElementType.ARROW) {
             renderBottomArrow(fs, element);
-        } else if (element.type === ElementType.KEYCODE) {
-            renderKeyCode(fs, element, film_properties.start_frame);
         }
     }
 }
@@ -689,8 +749,13 @@ function renderFilmstrip(images, options=DEFAULT_FILMSTRIP_OPTIONS) {
     let film_properties = FILM[filmstock.id];
 
     // draw film border
-    renderTopElements(fs, film_properties);
-    renderBottomElements(fs, film_properties);
+    if (film_properties.cinema_edge) {
+        renderCinemaEdge(fs, film_properties.cinema_edge);
+        // cinema film: bottom edge is blank
+    } else {
+        renderTopElements(fs, film_properties);
+        renderBottomElements(fs, film_properties);
+    }
 
     // Add grain
     const grain_color = color(film_properties.sprocket_hole_color);
