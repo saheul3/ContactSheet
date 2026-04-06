@@ -330,8 +330,11 @@ function renderCinemaEdge(fs, cinema) {
 
         for (let half = 0; half < 2; half++) {
             const hx = foot_x + half * half_px;
+            // Mid-foot displays the NEXT foot's key number (observed: 8217● at
+            // foot boundary, 8218+32● at mid-foot).  Barcode encodes the same.
+            const display_key = half === 0 ? key_num : key_num + 1;
 
-            // ─── Frame index marks: 5x dash at 4-perf intervals ───
+            // ─── Frame index marks: 5× dash at 4-perf intervals (perfs 0-16) ─
             fs.textSize(reg_size);
             fs.textAlign(CENTER, CENTER);
             for (let d = 0; d < 5; d++) {
@@ -340,45 +343,66 @@ function renderCinemaEdge(fs, cinema) {
                 fs.text('\u2013', dx, strip_cy); // en-dash
             }
 
-            // ─── Matching check symbols (random) ───
+            // ─── Matching check symbols (random, 1–2 per dash group) ─────────
+            // Observed positions: ±1 perf from specific dashes (not always midpoint)
             const seed = key_num * 2 + half;
-            if (hashRand(seed) > 0.3) {
-                const sym_idx  = Math.floor(hashRand(seed + 7) * CHECK_SYMS.length);
-                const dash_idx = Math.floor(hashRand(seed + 13) * 4);
-                const sym_x    = hx + (dash_idx * 4 + 2) * perf_px;
-                if (sym_x > 0 && sym_x < fs.width) {
-                    fs.textSize(reg_size * 0.7);
-                    fs.textAlign(CENTER, CENTER);
-                    fs.text(CHECK_SYMS[sym_idx], sym_x, strip_cy);
+            if (hashRand(seed) > 0.25) {
+                fs.textSize(reg_size * 0.7);
+                fs.textAlign(CENTER, CENTER);
+                const offsets = [1, 2, 3]; // +1 after dash, midpoint, -1 before next
+                // First symbol
+                const sym_idx1  = Math.floor(hashRand(seed + 7) * CHECK_SYMS.length);
+                const dash_idx1 = Math.floor(hashRand(seed + 13) * 4);
+                const off1      = offsets[Math.floor(hashRand(seed + 19) * 3)];
+                const sym_x1    = hx + (dash_idx1 * 4 + off1) * perf_px;
+                if (sym_x1 > 0 && sym_x1 < fs.width) {
+                    fs.text(CHECK_SYMS[sym_idx1], sym_x1, strip_cy);
+                }
+                // Second symbol (≈50 % of the time, on a different dash gap)
+                if (hashRand(seed + 3) > 0.5) {
+                    const sym_idx2  = Math.floor(hashRand(seed + 17) * CHECK_SYMS.length);
+                    let dash_idx2   = Math.floor(hashRand(seed + 23) * 4);
+                    if (dash_idx2 === dash_idx1) dash_idx2 = (dash_idx2 + 1) % 4;
+                    const off2 = offsets[Math.floor(hashRand(seed + 29) * 3)];
+                    const sym_x2 = hx + (dash_idx2 * 4 + off2) * perf_px;
+                    if (sym_x2 > 0 && sym_x2 < fs.width) {
+                        fs.text(CHECK_SYMS[sym_idx2], sym_x2, strip_cy);
+                    }
                 }
             }
 
-            // ─── Barcode (MR. CODE): ~2.5 perfs after dashes, ~5 perfs wide ───
+            // ─── Barcode (MR. CODE): ~2.5 perfs after dashes, ~5 perfs wide ─
             const bc_x = hx + 22.5 * perf_px;
             if (bc_x > -6 * perf_px && bc_x < fs.width + perf_px) {
                 const perf_offset = half * 32;
-                const bc = drawKeyCodeBarcode(key_num, perf_offset, parseInt(roll), col);
+                const bc = drawKeyCodeBarcode(display_key, perf_offset, parseInt(roll), col);
                 const bc_w = 5 * perf_px;
                 fs.image(bc, bc_x, strip_cy - bc_h * 0.5, bc_w, bc_h);
                 bc.remove();
             }
 
-            // ─── Key number text ───
+            // ─── Key number text ─────────────────────────────────────────────
             const key_x = hx + 28.5 * perf_px;
+            let key_text_str = '';
             if (key_x > -12 * perf_px && key_x < fs.width + perf_px) {
                 fs.textAlign(LEFT, CENTER);
                 if (half === 0) {
                     fs.textSize(reg_size);
-                    fs.text(`${mfg}${fid} ${ftype} ${roll} ${key_num}\u25CF`, key_x, strip_cy);
+                    key_text_str = `${mfg}${fid} ${ftype} ${roll} ${display_key}\u25CF`;
                 } else {
                     fs.textSize(mid_size);
-                    fs.text(`${mfg}${fid} ${ftype} ${roll} ${key_num}+32\u25CF`, key_x, strip_cy);
+                    key_text_str = `${mfg}${fid} ${ftype} ${roll} ${display_key}+32\u25CF`;
                 }
+                fs.text(key_text_str, key_x, strip_cy);
             }
 
-            // ─── Zero-frame reference mark ───
-            if (half === 0 && fi % 3 === 0) {
-                const arrow_x = hx + 28 * perf_px;
+            // ─── Zero-frame reference mark (after text, per observation) ─────
+            // Observed: ↑ appears 1–3.5 perfs after key number text, periodically.
+            const arrowSeed = key_num * 3 + half;
+            if (hashRand(arrowSeed) < 0.35) {
+                fs.textSize(half === 0 ? reg_size : mid_size);
+                const tw = key_text_str ? fs.textWidth(key_text_str) : 0;
+                const arrow_x = key_x + tw + 1 * perf_px;
                 if (arrow_x > 0 && arrow_x < fs.width) {
                     fs.textSize(reg_size);
                     fs.textAlign(CENTER, CENTER);

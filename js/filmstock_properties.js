@@ -1018,19 +1018,37 @@ const FILM = {
         'enabled': false,
         'dx_code': '854011',
     },
+    'kodak-vision3-50d': {
+        'name': 'Kodak Vision3 50D',
+        'icon': 'kodakvision350d_icon.png',
+        'enabled': true,
+        'dx_code': -1,
+        'start_frame': 1,
+        'cinema_edge': {
+            'color': '#dcaf7b',
+            'mfg_code': 'E',
+            'film_code': 'R',
+            'film_type': '03',      // 5203
+            'roll': '0412',
+            'base_key': 5130,
+            'height_mm': 1.1,
+            'margin_mm': 0.3,
+        },
+        'top_elements': [],
+        'bottom_elements': [],
+        'sprocket_hole_color': '#b49342',
+    },
     'kodak-vision3-250d': {
         'name': 'Kodak Vision3 250D',
         'icon': 'kodakvision3250d_icon.png',
         'enabled': true,
         'dx_code': -1,
         'start_frame': 1,
-        // Cinema film: edge markings on top edge only, per KeyKode spec.
-        // Bottom edge blank. Rendering handled by renderCinemaEdge().
         'cinema_edge': {
-            'color': '#e8621a',
+            'color': '#dcaf7b',
             'mfg_code': 'E',
             'film_code': 'N',
-            'film_type': '31',      // last 2 digits of 5231
+            'film_type': '31',      // 5231
             'roll': '0674',
             'base_key': 8217,
             'height_mm': 1.1,
@@ -1038,7 +1056,27 @@ const FILM = {
         },
         'top_elements': [],
         'bottom_elements': [],
-        'sprocket_hole_color': '#c24a10',
+        'sprocket_hole_color': '#b49342',
+    },
+    'kodak-vision3-500t': {
+        'name': 'Kodak Vision3 500T',
+        'icon': 'kodakvision3500t_icon.png',
+        'enabled': true,
+        'dx_code': -1,
+        'start_frame': 1,
+        'cinema_edge': {
+            'color': '#dcaf7b',
+            'mfg_code': 'E',
+            'film_code': 'J',
+            'film_type': '19',      // 5219
+            'roll': '0891',
+            'base_key': 3042,
+            'height_mm': 1.1,
+            'margin_mm': 0.3,
+        },
+        'top_elements': [],
+        'bottom_elements': [],
+        'sprocket_hole_color': '#b49342',
     },
     'kodak-portra-400-120': {
         'name': 'Kodak Portra 400',
