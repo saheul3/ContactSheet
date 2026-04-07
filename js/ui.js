@@ -73,6 +73,7 @@ function selectFilmStock(select_id) {
     document.getElementById(select_id).classList.add("active");
     const is120 = FILM[select_id] && FILM[select_id].format === '120';
     document.getElementById('film120Options').classList.toggle('hidden', !is120);
+    document.getElementById('burnedLeaderOptions').classList.toggle('hidden', is120);
 }
 
 // MARK: js check if document is ready

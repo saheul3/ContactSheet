@@ -97,6 +97,42 @@ function uploadImages(event) {
     document.getElementById('uploadImageButton_alt').removeAttribute('disabled');
 }
 
+function loadTestImages() {
+    const NUM_TEST = 12;
+    let preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    let loaded = 0;
+
+    startLoad();
+
+    for (let i = 1; i <= NUM_TEST; i++) {
+        let img = new Image();
+        img.onload = function() {
+            let scaled = scaleImage(img, PREVIEW_HEIGHT);
+            let el = document.createElement('img');
+            el.src = scaled.src;
+            el.alt = 'test_' + String(i).padStart(2, '0') + '.jpg';
+            el.id = 'previewImage' + (i - 1);
+            preview.appendChild(el);
+
+            loaded++;
+            let bar = document.getElementById('uploadProgressBar');
+            bar.style.width = (loaded / NUM_TEST * 100) + '%';
+            document.getElementById('uploadProgressText').innerHTML = loaded + ' / ' + NUM_TEST;
+
+            if (loaded === NUM_TEST) {
+                finishLoad();
+                refreshImages();
+            }
+        };
+        img.src = 'img/test/test_' + String(i).padStart(2, '0') + '.jpg';
+    }
+
+    document.getElementById('uploadProgressBar').style.width = '0%';
+    document.getElementById('uploadProgressText').innerHTML = '0 / ' + NUM_TEST;
+    document.getElementById('imagePreview').classList.remove('disabled');
+}
+
 function addUploaderEventListener() {
     document.getElementById('uploadImageButton').addEventListener('change', uploadImages);
     document.getElementById('uploadImageButton_alt').addEventListener('click', function() {

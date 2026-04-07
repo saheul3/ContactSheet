@@ -1,5 +1,6 @@
 // pimage
 let images = [];
+let BURNED_LEADER_IMG = null;
 
 function randrange(min, max) {
     return Math.random() * (max - min) + min;
@@ -62,14 +63,19 @@ function renderSprocketHoles(fs, film_properties) {
     }
 }
 
-function renderImages(fs, images) {
-    let x = HPADDING_PX;
+function renderImages(fs, images, offset_x = 0) {
+    let x = HPADDING_PX + offset_x;
     let y = VPADDING_PX;
     for (let i = 0; i < images.length; i++) {
         let img = images[i];
         fs.image(img, x, y, SHOT_WIDTH_PX, SHOT_HEIGHT_PX);
         x += SHOT_WIDTH_PX + HPADDING_PX;
     }
+}
+
+function renderBurnedLeader(fs, leader_w) {
+    if (!BURNED_LEADER_IMG) return;
+    fs.image(BURNED_LEADER_IMG, 0, 0, leader_w, fs.height);
 }
 
 function renderTopFrameCount(fs, element, start_frame = 0) {
@@ -647,28 +653,31 @@ function renderContactSheet120(fp, num_cols, padding_mm, strip_spacing_mm = 2.0)
     let cs = createGraphics(cs_width, cs_height);
     cs.background(0);
 
+    // Helper: flip a local_mm position so the strip runs bottom-to-top.
+    // Original top-to-bottom: y = padding_px + local_mm * SCALE_120
+    // Flipped bottom-to-top:  y = padding_px + col_height_px - local_mm * SCALE_120
+    const flipY = (local_mm) => padding_px + col_height_px - local_mm * SCALE_120;
+
     for (let c = 0; c < num_cols; c++) {
         const strip_x       = padding_px + c * (strip_w + strip_spacing_px);
         const film_start_mm = c * col_length_mm;
 
-        // Place each photo at its absolute film position.
-        // Photos that physically fall in this column's film range are drawn
-        // at their correct local offset — preserving spacing across cut boundaries.
+        // Place each photo at its absolute film position (bottom-to-top, images upright).
+        const img_h = shot_size_mm * SCALE_120;
         for (let idx = 0; idx < images.length; idx++) {
             const abs_mm = idx * shot_travel_mm;
             if (abs_mm < film_start_mm || abs_mm >= film_start_mm + col_length_mm) continue;
             const local_mm = abs_mm - film_start_mm;
             const img_x    = strip_x + edge_pad_px;
-            const img_y    = padding_px + (local_mm + frame_gap_mm) * SCALE_120;
-            cs.image(images[idx], img_x, img_y, shot_width_px, shot_size_mm * SCALE_120);
+            const img_y    = flipY(local_mm + frame_gap_mm + shot_size_mm);
+            cs.image(images[idx], img_x, img_y, shot_width_px, img_h);
         }
 
         // Find markers (m=1..18) that fall within this column's film range.
-        // Marker m is at absolute position m * marker_interval_mm.
         const first_m = Math.max(1,  Math.ceil(film_start_mm / marker_interval_mm));
         const last_m  = Math.min(18, Math.floor((film_start_mm + col_length_mm - 0.001) / marker_interval_mm));
 
-        // Draw side elements
+        // Draw side elements (flipped bottom-to-top)
         if (fp.side_elements) {
             for (let el of fp.side_elements) {
                 const is_left = el.side !== 'right';
@@ -677,9 +686,10 @@ function renderContactSheet120(fp, num_cols, padding_mm, strip_spacing_mm = 2.0)
                     : strip_x + strip_w - edge_pad_px / 2;
 
                 if (el.type === ElementType.LABEL) {
-                    // 22 items (11 film names + 11 codes) evenly across total_used_mm.
-                    // Items alternate: even index → film name, odd index → label_code.
-                    const n_labels = 22;
+                    const lbl_count = el.label_count || 16;
+                    const n_labels = 2 * lbl_count; // text, code, text, code, ...
+                    const start_num = el.start_num || 41;
+                    const end_num = el.end_num || (start_num + lbl_count - 1);
                     const label_interval_mm = total_used_mm / n_labels;
                     cs.fill(el.color);
                     cs.noStroke();
@@ -692,16 +702,18 @@ function renderContactSheet120(fp, num_cols, padding_mm, strip_spacing_mm = 2.0)
                         if (abs_mm < film_start_mm || abs_mm >= film_start_mm + col_length_mm) continue;
                         const local_mm  = abs_mm - film_start_mm;
                         const user_code = (document.getElementById('film120Date').value || '').trim();
-                        const code_str  = user_code || el.label_code || el.text;
-                        const label_str = (i % 2 === 0) ? el.text : code_str;
+                        const seq_num = String(start_num + Math.floor(i / 2));
+                        const code_str = el.fixed_code ? (user_code || el.label_code || el.text) : (user_code || seq_num);
+                        const label_str = (i % 2 === 0) ? code_str : el.text;
                         cs.push();
-                        cs.translate(cx, padding_px + local_mm * SCALE_120);
-                        cs.rotate(HALF_PI);
+                        cs.translate(cx, flipY(local_mm));
+                        cs.rotate(-HALF_PI);
                         cs.text(label_str, 0, 0);
                         cs.pop();
                     }
                 } else if (el.type === ElementType.FRAME_COUNT) {
                     const margin_px = (el.margin_mm || 0) * SCALE_120;
+                    const below = el.below || false;
                     cs.fill(el.color);
                     cs.noStroke();
                     cs.textSize(el.height_mm * SCALE_120);
@@ -710,11 +722,11 @@ function renderContactSheet120(fp, num_cols, padding_mm, strip_spacing_mm = 2.0)
                     cs.textAlign(CENTER, CENTER);
                     for (let m = first_m; m <= last_m; m++) {
                         const marker_mm  = m * marker_interval_mm;
-                        const marker_y   = padding_px + (marker_mm - film_start_mm) * SCALE_120;
-                        const marker_num = m; // m=1..18 directly
+                        const marker_y   = flipY(marker_mm - film_start_mm);
+                        const marker_num = m;
                         cs.push();
-                        cs.translate(cx, marker_y + margin_px);
-                        cs.rotate(HALF_PI);
+                        cs.translate(cx, marker_y + (below ? margin_px : -margin_px));
+                        cs.rotate(-HALF_PI);
                         cs.text(marker_num.toString(), 0, 0);
                         cs.pop();
                     }
@@ -726,10 +738,58 @@ function renderContactSheet120(fp, num_cols, padding_mm, strip_spacing_mm = 2.0)
                     cs.noStroke();
                     for (let m = first_m; m <= last_m; m++) {
                         const marker_mm = m * marker_interval_mm;
-                        const marker_y  = padding_px + (marker_mm - film_start_mm) * SCALE_120;
-                        const base_y    = marker_y + margin_px;
-                        // ▲ pointing up
-                        cs.triangle(cx - aw/2, base_y + ah, cx + aw/2, base_y + ah, cx, base_y);
+                        const marker_y  = flipY(marker_mm - film_start_mm);
+                        const base_y    = marker_y - margin_px;
+                        if (el.arrow_down) {
+                            // ▼ pointing down
+                            cs.triangle(cx - aw/2, base_y, cx + aw/2, base_y, cx, base_y + ah);
+                        } else {
+                            // ▲ pointing up
+                            cs.triangle(cx - aw/2, base_y, cx + aw/2, base_y, cx, base_y - ah);
+                        }
+                    }
+                } else if (el.type === ElementType.ARROW_NUMBERED) {
+                    // Pattern: ▲, ▲1, ▲, ▲2, ..., ▲, ▲12, ▲, X (26 items equally spaced)
+                    const max_frame = el.max_frame || 12;
+                    const n_items = 2 * max_frame + 2; // 26 for max_frame=12
+                    const ah = (el.arrow_height_mm || 2.5) * SCALE_120;
+                    const aw = (el.arrow_width_mm || 1.2) * SCALE_120;
+                    const nh = (el.num_height_mm || 1.4) * SCALE_120;
+                    const item_interval_mm = total_used_mm / n_items;
+
+                    cs.fill(el.color);
+                    cs.noStroke();
+                    cs.textFont(FONTS_CACHE[el.font]);
+                    cs.textStyle(el.font_style === 'bold' ? BOLD : NORMAL);
+                    cs.textSize(nh);
+                    cs.textAlign(CENTER, CENTER);
+
+                    for (let i = 0; i < n_items; i++) {
+                        const abs_mm = (i + 0.5) * item_interval_mm;
+                        if (abs_mm < film_start_mm || abs_mm >= film_start_mm + col_length_mm) continue;
+                        const local_mm = abs_mm - film_start_mm;
+                        const y = flipY(local_mm);
+
+                        if (i === n_items - 1) {
+                            // Last item: X
+                            cs.push();
+                            cs.translate(cx, y);
+                            cs.rotate(-HALF_PI);
+                            cs.text('X', 0, 0);
+                            cs.pop();
+                        } else {
+                            // Draw arrow ▲
+                            cs.triangle(cx - aw/2, y, cx + aw/2, y, cx, y - ah);
+                            // Odd indices (1, 3, 5, ...) get a number after the arrow
+                            if (i % 2 === 1) {
+                                const frame_num = Math.floor(i / 2) + 1;
+                                cs.push();
+                                cs.translate(cx, y - ah - nh * 0.5);
+                                cs.rotate(-HALF_PI);
+                                cs.text(frame_num.toString(), 0, 0);
+                                cs.pop();
+                            }
+                        }
                     }
                 }
             }
@@ -755,9 +815,15 @@ function renderContactSheet120(fp, num_cols, padding_mm, strip_spacing_mm = 2.0)
 
 function renderFilmstrip(images, options=DEFAULT_FILMSTRIP_OPTIONS) {
 
-    // Create a new canvas for the filmstrip
-    const fs_width = images.length * CYCLE_W + HPADDING_PX;
+    // Burned leader: extra space at the start of the filmstrip
+    const burned_leader = document.getElementById('burnedLeaderCheck')?.checked || false;
     const fs_height = SHOT_HEIGHT_PX + 2 * VPADDING_PX;
+    const leader_w = (burned_leader && BURNED_LEADER_IMG)
+        ? Math.round(fs_height * (BURNED_LEADER_IMG.width / BURNED_LEADER_IMG.height))
+        : 0;
+
+    // Create a new canvas for the filmstrip
+    const fs_width = images.length * CYCLE_W + HPADDING_PX + leader_w;
     const fs_width_int = Math.round(fs_width);
     const fs_height_int = Math.round(fs_height);
     let fs = createGraphics(fs_width, fs_height);
@@ -814,25 +880,24 @@ function renderFilmstrip(images, options=DEFAULT_FILMSTRIP_OPTIONS) {
         // fs_blur.remove();
     }
 
+    // Burned leader overlay (before sprocket holes so holes punch through)
+    if (leader_w > 0) {
+        renderBurnedLeader(fs, leader_w);
+    }
+
     // draw sprocket holes
     renderSprocketHoles(fs, film_properties);
 
-    // draw images
-    renderImages(fs, images);
-
-    // Respect color vs monochrome
-    // if (film_properties.bw) {
-    //     fs.filter(GRAY);
-    // }
-
+    // draw images (shifted right by leader width)
+    renderImages(fs, images, leader_w);
 
     return fs;
 }
 
-function renderContactSheet(filmstrip, num_cols, padding_mm, strip_spacing_mm = 1.5) {
+function renderContactSheet(filmstrip, num_cols, padding_mm, strip_spacing_mm = 1.5, leader_w = 0) {
     let padding_px = padding_mm * SCALE;
     let strip_spacing_px = strip_spacing_mm * SCALE;
-    let cs_width = num_cols * (SHOT_WIDTH_PX + HPADDING_PX) - HPADDING_PX + 2 * padding_px;
+    let cs_width = num_cols * (SHOT_WIDTH_PX + HPADDING_PX) - HPADDING_PX + 2 * padding_px + leader_w;
     let cs_height = Math.ceil(images.length / num_cols) * (filmstrip.height + strip_spacing_px) - strip_spacing_px + 2 * padding_px;
     let cs = createGraphics(cs_width, cs_height);
 
@@ -843,7 +908,7 @@ function renderContactSheet(filmstrip, num_cols, padding_mm, strip_spacing_mm = 
     cs.translate(0, padding_px);
     for (let i = 0, j = 0; i < images.length; i += num_cols, j++) {
         let start_x = padding_px + randrange(0.2, 0.8) * HPADDING_PX;
-        let x = j * num_cols * (SHOT_WIDTH_PX + HPADDING_PX) + HPADDING_PX;
+        let x = j * num_cols * (SHOT_WIDTH_PX + HPADDING_PX) + HPADDING_PX + (j > 0 ? leader_w : 0);
         let y = j * (filmstrip.height + strip_spacing_px);
         cs.image(filmstrip, start_x - x, y);
     }
@@ -882,7 +947,11 @@ function previewDraw() {
         const num_cols_120 = { '6x4.5': 4, '6x6': 3, '6x7': 2, '6x9': 2 }[fp.medium_format || '6x6'] || 3;
         cs = renderContactSheet120(fp, num_cols_120, 3);
     } else {
-        cs = renderContactSheet(fs, 5, 3);
+        const burned_leader = document.getElementById('burnedLeaderCheck')?.checked || false;
+        const lw = (burned_leader && BURNED_LEADER_IMG)
+            ? Math.round((SHOT_HEIGHT_PX + 2 * VPADDING_PX) * (BURNED_LEADER_IMG.width / BURNED_LEADER_IMG.height))
+            : 0;
+        cs = renderContactSheet(fs, 5, 3, 1.5, lw);
     }
     fs.remove();
     let csimg = document.getElementById('contactsheetimg');
@@ -911,6 +980,9 @@ function preload() {
             FONTS_CACHE[font] = font;
         }
     }
+
+    // load burned leader overlay
+    BURNED_LEADER_IMG = loadImage('assets/burnt_film_effect_expend.png');
 
     // load image assets from filmstock
     for (let key in FILM) {

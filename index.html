@@ -23,6 +23,7 @@ layout: default
         <input type="file" id="uploadImageButton" webkitdirectory mozdirectory msdirectory odirectory directory multiple/>
         <section class="field-row">
             <button id="uploadImageButton_alt" disabled>Continue</button>
+            <button id="testImagesButton" onclick="loadTestImages()">Test</button>
         </section>
     </div>
 </div>
@@ -82,6 +83,10 @@ layout: default
         <div id="film120Options" class="hidden" style="padding: 4px 0;">
             <label for="film120Date" style="font-size:11px;">Film code</label><br>
             <input type="text" id="film120Date" placeholder="e.g. 0303" style="width:100%; font-size:11px;">
+        </div>
+        <div id="burnedLeaderOptions" style="padding: 4px 0;">
+            <input type="checkbox" id="burnedLeaderCheck">
+            <label for="burnedLeaderCheck" style="font-size:11px;">Burned leader</label>
         </div>
         <section style="text-align: right; padding-top: 4px;">
             <button onclick="showFilmstrip()">Continue</button>
