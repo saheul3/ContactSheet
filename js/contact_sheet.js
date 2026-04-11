@@ -63,12 +63,53 @@ function renderSprocketHoles(fs, film_properties) {
     }
 }
 
+// ── Aspect-preserving image placement ───────────────────────────────────────
+// Draws `img` into the (w × h) slot at (x, y) using "cover" fit: the image is
+// scaled uniformly so it fully covers the slot, then cropped evenly from the
+// overflow side.  Optional `rotation` (0/90/180/270 degrees CW) is applied
+// before fitting so that the drawn result appears rotated inside the slot.
+function drawImageCoverFit(fs, img, x, y, w, h, rotation) {
+    if (!img || !img.width || !img.height || w <= 0 || h <= 0) return;
+    rotation = rotation || 0;
+
+    // When rotated 90°/270° the source image's axes are swapped relative to
+    // the slot, so the cover-fit crop must be computed against the transposed
+    // slot dimensions.
+    let fit_w = w, fit_h = h;
+    if (rotation === 90 || rotation === 270) { fit_w = h; fit_h = w; }
+
+    const slot_aspect = fit_w / fit_h;
+    const img_aspect  = img.width / img.height;
+    let sx, sy, sw, sh;
+    if (img_aspect > slot_aspect) {
+        sh = img.height;
+        sw = sh * slot_aspect;
+        sx = (img.width - sw) / 2;
+        sy = 0;
+    } else {
+        sw = img.width;
+        sh = sw / slot_aspect;
+        sx = 0;
+        sy = (img.height - sh) / 2;
+    }
+
+    if (rotation === 0) {
+        fs.image(img, x, y, w, h, sx, sy, sw, sh);
+    } else {
+        fs.push();
+        fs.translate(x + w / 2, y + h / 2);
+        fs.rotate(rotation * Math.PI / 180);
+        fs.image(img, -fit_w / 2, -fit_h / 2, fit_w, fit_h, sx, sy, sw, sh);
+        fs.pop();
+    }
+}
+
 function renderImages(fs, images, offset_x = 0) {
     let x = HPADDING_PX + offset_x;
     let y = VPADDING_PX;
     for (let i = 0; i < images.length; i++) {
         let img = images[i];
-        fs.image(img, x, y, SHOT_WIDTH_PX, SHOT_HEIGHT_PX);
+        drawImageCoverFit(fs, img, x, y, SHOT_WIDTH_PX, SHOT_HEIGHT_PX);
         x += SHOT_WIDTH_PX + HPADDING_PX;
     }
 }
@@ -444,143 +485,256 @@ const DEFAULT_FILMSTRIP_OPTIONS = {
 };
 
 // ── 120 film rendering ────────────────────────────────────────────────────────
+// Architecture:
+//   1. renderFilmstrip120() produces one fixed-length horizontal strip
+//      (length depends on format, not on how many images were uploaded).
+//   2. renderContactSheet120() slices that strip into equal pieces and
+//      arranges them:  vertical → rotated CCW columns,  horizontal → stacked rows.
 
 const SHOT_HEIGHT_120_MM = 56;
-const HPADDING_120_MM = 5.0;
 const VPADDING_120_MM = 2.0;
+const FRAME_GAP_120_MM = 2.0;
 const SCALE_120 = FINAL_HEIGHT_120 / (SHOT_HEIGHT_120_MM + 2 * VPADDING_120_MM);
 const SHOT_HEIGHT_120_PX = SHOT_HEIGHT_120_MM * SCALE_120;
-const HPADDING_120_PX = HPADDING_120_MM * SCALE_120;
 const VPADDING_120_PX = VPADDING_120_MM * SCALE_120;
+const FRAME_GAP_120_PX = FRAME_GAP_120_MM * SCALE_120;
 
-function render120TopLabel(fs, element, cycle_w) {
-    fs.fill(element.color);
+function get120Format() {
+    const sel = document.getElementById('film120Format');
+    return (sel && sel.value) || '6x6';
+}
+function get120Orientation() {
+    const el = document.querySelector('input[name="film120Orientation"]:checked');
+    return (el && el.value) || 'portrait';
+}
+function get120Camera() {
+    const el = document.querySelector('input[name="film120Camera"]:checked');
+    return (el && el.value) || 'slr';
+}
+
+// TLR cameras capture images rotated 90° CW from the intended scene.
+// SLR: no rotation (0°).  TLR: rotate 90° CW on the filmstrip.
+function getImageRotation(isTLR) {
+    return isTLR ? 90 : 0;
+}
+
+// ── Edge-element renderers (drawn on the horizontal filmstrip) ───────────────
+// Config `side:'left'` → top edge of strip (becomes left of column after CCW).
+// Config `side:'right'` → bottom edge of strip (becomes right of column).
+
+function render120EdgeLabel(fs, el, fs_width) {
+    const lbl_count = el.label_count || 16;
+    const n_labels = 2 * lbl_count;
+    const start_num = el.start_num || 41;
+    const interval = fs_width / n_labels;
+
+    fs.fill(el.color);
     fs.noStroke();
-    fs.textSize(element.height_mm * SCALE_120);
-    fs.textAlign(LEFT, TOP);
-    fs.textFont(FONTS_CACHE[element.font]);
-    fs.textStyle(element.font_style === 'bold' ? BOLD : NORMAL);
-    fs.push();
-    fs.translate(element.offset * cycle_w, element.margin_mm * SCALE_120);
-    let interval = (element.repeat === RepeatType.FRAME && element.every)
-        ? element.every * cycle_w : cycle_w;
-    if (element.repeat === RepeatType.NONE) {
-        fs.text(element.text, 0, 0);
-    } else {
-        for (let x = 0; x < fs.width; x += interval) fs.text(element.text, x, 0);
-    }
-    fs.pop();
-}
-
-function render120FrameCount(fs, element, cycle_w, start_frame, bottom, alt) {
-    fs.fill(element.color);
-    fs.noStroke();
-    fs.textSize(element.height_mm * SCALE_120);
-    fs.textFont(FONTS_CACHE[element.font]);
-    fs.textStyle(element.font_style === 'bold' ? BOLD : NORMAL);
-    if (bottom) {
-        fs.textAlign(CENTER, BOTTOM);
-        fs.push();
-        fs.translate(element.offset * cycle_w, fs.height - element.margin_mm * SCALE_120);
-    } else {
-        fs.textAlign(CENTER, TOP);
-        fs.push();
-        fs.translate(element.offset * cycle_w, element.margin_mm * SCALE_120);
-    }
-    for (let x = 0, count = start_frame; x < fs.width; x += cycle_w, count++) {
-        fs.text(frameCountToString(count, alt), x, 0);
-    }
-    fs.pop();
-}
-
-function render120TopElements(fs, film_properties, cycle_w) {
-    if (!film_properties.top_elements) return;
-    for (let el of film_properties.top_elements) {
-        if (el.type === ElementType.LABEL)            render120TopLabel(fs, el, cycle_w);
-        else if (el.type === ElementType.FRAME_COUNT) render120FrameCount(fs, el, cycle_w, film_properties.start_frame || 1, false, false);
-    }
-}
-
-function render120BottomElements(fs, film_properties, cycle_w) {
-    if (!film_properties.bottom_elements) return;
-    for (let el of film_properties.bottom_elements) {
-        if (el.type === ElementType.LABEL)                render120TopLabel(fs, el, cycle_w);
-        else if (el.type === ElementType.FRAME_COUNT)     render120FrameCount(fs, el, cycle_w, film_properties.start_frame || 1, true, false);
-        else if (el.type === ElementType.FRAME_COUNT_ALT) render120FrameCount(fs, el, cycle_w, film_properties.start_frame || 1, true, true);
-    }
-}
-
-// Renders text rotated 90° in the side padding area of each frame
-function render120SideLabel(fs, element, cycle_w, shot_width_px) {
-    fs.fill(element.color);
-    fs.noStroke();
-    fs.textSize(element.height_mm * SCALE_120);
-    fs.textFont(FONTS_CACHE[element.font]);
-    fs.textStyle(element.font_style === 'bold' ? BOLD : NORMAL);
+    fs.textSize(el.height_mm * SCALE_120);
+    fs.textFont(FONTS_CACHE[el.font]);
+    fs.textStyle(el.font_style === 'bold' ? BOLD : NORMAL);
     fs.textAlign(CENTER, CENTER);
 
-    const is_right = element.side !== 'left';
-    const x_in_cycle = is_right
-        ? shot_width_px + HPADDING_120_PX / 2
-        : -HPADDING_120_PX / 2;
-    const y_center = VPADDING_120_PX + SHOT_HEIGHT_120_PX / 2 + (element.margin_mm || 0) * SCALE_120;
-    const interval = (element.repeat === RepeatType.FRAME && element.every)
-        ? element.every * cycle_w : cycle_w;
+    const is_top = el.side !== 'right';
+    const y = is_top ? VPADDING_120_PX * 0.5 : FINAL_HEIGHT_120 - VPADDING_120_PX * 0.5;
 
-    for (let x = HPADDING_120_PX; x < fs.width; x += interval) {
-        fs.push();
-        fs.translate(x + x_in_cycle, y_center);
-        fs.rotate(-HALF_PI);  // reads bottom-to-top like real film
-        fs.text(element.text, 0, 0);
-        fs.pop();
+    for (let i = 0; i < n_labels; i++) {
+        const x = (i + 0.5) * interval;
+        const user_code = (document.getElementById('film120Date').value || '').trim();
+        const seq_num = String(start_num + Math.floor(i / 2));
+        const code_str = el.fixed_code ? (user_code || el.label_code || el.text) : (user_code || seq_num);
+        const label_str = (i % 2 === 0) ? code_str : el.text;
+        fs.text(label_str, x, y);
     }
 }
 
-// Renders small downward-pointing arrow markers (▼) in the left padding near the top of each frame
-function render120SideArrow(fs, element, cycle_w, shot_width_px) {
-    fs.fill(element.color);
+function render120EdgeFrameCount(fs, el, fs_width) {
+    const total_markers = 18;
+    const interval = fs_width / (total_markers + 1);
+    const margin_px = (el.margin_mm || 0) * SCALE_120;
+    const below = el.below || false;
+
+    fs.fill(el.color);
     fs.noStroke();
-    const h = element.size_mm * SCALE_120;
-    const margin_px = (element.margin_mm || 0) * SCALE_120;
-    const interval = (element.repeat === RepeatType.FRAME && element.every)
-        ? element.every * cycle_w : cycle_w;
+    fs.textSize(el.height_mm * SCALE_120);
+    fs.textFont(FONTS_CACHE[el.font]);
+    fs.textStyle(el.font_style === 'bold' ? BOLD : NORMAL);
+    fs.textAlign(CENTER, CENTER);
 
-    for (let x = HPADDING_120_PX; x < fs.width; x += interval) {
-        // centered in left padding, near the top of the frame (▼)
-        const cx = x - HPADDING_120_PX / 2;
-        const cy = VPADDING_120_PX + margin_px;
-        fs.triangle(cx - h/2, cy, cx + h/2, cy, cx, cy + h);
+    const is_top = el.side !== 'right';
+    // cy is centred in the edge band (top or bottom VPADDING strip of the filmstrip).
+    const cy = is_top ? VPADDING_120_PX * 0.5 : FINAL_HEIGHT_120 - VPADDING_120_PX * 0.5;
+    // 'margin' shifts ALONG the film direction (= filmstrip x).
+    //   OLD column:  marker_y + (below ? +margin_px : -margin_px)
+    //   NEW strip:   m*interval + (below ? -margin_px : +margin_px)   (column +y ↔ filmstrip -x)
+    const shift = below ? -margin_px : margin_px;
+
+    for (let m = 1; m <= total_markers; m++) {
+        const x = m * interval + shift;
+        fs.text(m.toString(), x, cy);
     }
 }
 
-function render120SideElements(fs, film_properties, cycle_w, shot_width_px) {
-    if (!film_properties.side_elements) return;
-    for (let el of film_properties.side_elements) {
-        if (el.type === ElementType.LABEL)      render120SideLabel(fs, el, cycle_w, shot_width_px);
-        else if (el.type === ElementType.ARROW) render120SideArrow(fs, el, cycle_w, shot_width_px);
+function render120EdgeArrow(fs, el, fs_width) {
+    const total_markers = 18;
+    const interval = fs_width / (total_markers + 1);
+    // height_mm is the arrow's extent ALONG the film (= length of the triangle).
+    // width_mm  is the arrow's thickness PERPENDICULAR to the film.
+    // This matches the OLD column definition where ▲ had "height" = ah along
+    // the column's long axis (= along the film) and "width" = aw perpendicular.
+    const arrow_len   = (el.height_mm || 4) * SCALE_120;
+    const arrow_thick = (el.width_mm  || 2) * SCALE_120;
+    const margin_px   = (el.margin_mm || 0) * SCALE_120;
+
+    fs.fill(el.color);
+    fs.noStroke();
+
+    const is_top = el.side !== 'right';
+    // Centre of the arrow in the edge band (top or bottom VPADDING strip).
+    const cy = is_top ? VPADDING_120_PX * 0.5 : FINAL_HEIGHT_120 - VPADDING_120_PX * 0.5;
+    const arrow_down = el.arrow_down || false;
+
+    for (let m = 1; m <= total_markers; m++) {
+        // OLD column: base_y = marker_y - margin_px  (shift toward top of column)
+        // Column -y ↔ filmstrip +x, so the equivalent filmstrip shift is +margin_px.
+        const ax = m * interval + margin_px;
+        if (arrow_down) {
+            // ◀ in filmstrip → ▼ in column (arrow_down = true)
+            fs.triangle(
+                ax, cy - arrow_thick / 2,
+                ax, cy + arrow_thick / 2,
+                ax - arrow_len, cy
+            );
+        } else {
+            // ▶ in filmstrip → ▲ in column (default)
+            fs.triangle(
+                ax, cy - arrow_thick / 2,
+                ax, cy + arrow_thick / 2,
+                ax + arrow_len, cy
+            );
+        }
     }
 }
 
-function renderFilmstrip120(images, options=DEFAULT_FILMSTRIP_OPTIONS) {
+function render120EdgeArrowNumbered(fs, el, fs_width) {
+    const max_frame = el.max_frame || 12;
+    const n_items   = 2 * max_frame + 2;
+    // arrow_height_mm = length ALONG film, arrow_width_mm = thickness PERPENDICULAR
+    const arrow_len   = (el.arrow_height_mm || 2.5) * SCALE_120;
+    const arrow_thick = (el.arrow_width_mm  || 1.2) * SCALE_120;
+    const nh        = (el.num_height_mm || 1.4) * SCALE_120;
+    const interval  = fs_width / n_items;
+
+    fs.fill(el.color);
+    fs.noStroke();
+    fs.textFont(FONTS_CACHE[el.font]);
+    fs.textStyle(el.font_style === 'bold' ? BOLD : NORMAL);
+    fs.textSize(nh);
+    fs.textAlign(CENTER, CENTER);
+
+    const is_top = el.side !== 'right';
+    const cy = is_top ? VPADDING_120_PX * 0.5 : FINAL_HEIGHT_120 - VPADDING_120_PX * 0.5;
+    const arrow_down = el.arrow_down || false;
+
+    for (let i = 0; i < n_items; i++) {
+        const ax = (i + 0.5) * interval;
+        if (i === n_items - 1) {
+            fs.text('X', ax, cy);
+            continue;
+        }
+        // Arrow parallel to film.  Default ▶ (→ ▲ in column after CCW).
+        if (arrow_down) {
+            fs.triangle(
+                ax, cy - arrow_thick / 2,
+                ax, cy + arrow_thick / 2,
+                ax - arrow_len, cy
+            );
+        } else {
+            fs.triangle(
+                ax, cy - arrow_thick / 2,
+                ax, cy + arrow_thick / 2,
+                ax + arrow_len, cy
+            );
+        }
+        if (i % 2 === 1) {
+            const frame_num = Math.floor(i / 2) + 1;
+            // Number placed past the apex along the arrow direction.
+            // After CCW rotation, "past the apex in +x" becomes "above apex (-y)" in the column,
+            // matching the OLD layout (frame number appears above the ▲ arrow tip).
+            const num_x = arrow_down
+                ? ax - arrow_len - nh * 0.5
+                : ax + arrow_len + nh * 0.5;
+            fs.text(frame_num.toString(), num_x, cy);
+        }
+    }
+}
+
+function render120EdgeElements(fs, fp, fs_width) {
+    if (!fp.side_elements) return;
+    for (let el of fp.side_elements) {
+        if (el.type === ElementType.LABEL)            render120EdgeLabel(fs, el, fs_width);
+        else if (el.type === ElementType.FRAME_COUNT) render120EdgeFrameCount(fs, el, fs_width);
+        else if (el.type === ElementType.ARROW)       render120EdgeArrow(fs, el, fs_width);
+        else if (el.type === ElementType.ARROW_NUMBERED) render120EdgeArrowNumbered(fs, el, fs_width);
+    }
+}
+
+// ── Filmstrip (one long horizontal image) ────────────────────────────────────
+
+function renderFilmstrip120(images, options = DEFAULT_FILMSTRIP_OPTIONS) {
     let filmstock_el = document.getElementById('filmSelect').getElementsByClassName('filmstock active')[0];
     if (!filmstock_el) { alert('No film stock selected'); return; }
     let fp = FILM[filmstock_el.id];
 
-    const shot_width_mm = MEDIUM_FORMAT_WIDTHS_MM[fp.medium_format || '6x6'];
-    const shot_width_px = shot_width_mm * SCALE_120;
-    const cycle_w = shot_width_px + HPADDING_120_PX;
+    const format  = get120Format();
+    const isTLR   = get120Camera() === 'tlr';
+    const isFree  = format === 'free';
+    const rotation = getImageRotation(isTLR);
 
-    const fs_width = images.length * cycle_w + HPADDING_120_PX;
-    const fs_height = SHOT_HEIGHT_120_PX + 2 * VPADDING_120_PX;
-    const fs_width_int = Math.round(fs_width);
+    // ── Per-image layout: compute position, width ───────────────────────
+    let slots = [];        // { x, width }
+    let frame_ends = [];   // cumulative x after each frame (slice boundaries)
+    let fs_width;
+
+    if (isFree) {
+        // Variable pitch: each image keeps its natural (post-rotation) aspect.
+        // No cropping, no forced ratio.
+        let x = 0;
+        for (let i = 0; i < images.length; i++) {
+            const eff_w = (rotation === 90 || rotation === 270) ? images[i].height : images[i].width;
+            const eff_h = (rotation === 90 || rotation === 270) ? images[i].width  : images[i].height;
+            const img_w = SHOT_HEIGHT_120_PX * (eff_w / eff_h);
+            slots.push({ x: x + FRAME_GAP_120_PX, width: img_w });
+            x += img_w + 2 * FRAME_GAP_120_PX;
+            frame_ends.push(x);
+        }
+        fs_width = Math.max(x, SHOT_HEIGHT_120_PX);
+    } else {
+        // Fixed-pitch format (6x6, 6x4.5, etc.)
+        const pitch_mm = MEDIUM_FORMAT_WIDTHS_MM[format] || MEDIUM_FORMAT_WIDTHS_MM['6x6'];
+        const num_exp  = STANDARD_EXPOSURES_120[format]  || 12;
+        const cycle_px = pitch_mm * SCALE_120;
+        const img_w_px = (pitch_mm - 2 * FRAME_GAP_120_MM) * SCALE_120;
+        fs_width = num_exp * cycle_px;
+
+        for (let i = 0; i < num_exp; i++) {
+            frame_ends.push((i + 1) * cycle_px);
+            if (i < images.length) {
+                slots.push({ x: i * cycle_px + FRAME_GAP_120_PX, width: img_w_px });
+            }
+        }
+    }
+
+    // ── Create filmstrip canvas ─────────────────────────────────────────
+    const fs_height     = FINAL_HEIGHT_120;
+    const fs_width_int  = Math.round(fs_width);
     const fs_height_int = Math.round(fs_height);
 
     let fs = createGraphics(fs_width, fs_height);
     fs.background(0);
 
-    render120TopElements(fs, fp, cycle_w);
-    render120BottomElements(fs, fp, cycle_w);
-    render120SideElements(fs, fp, cycle_w, shot_width_px);
+    // edge elements (labels, arrows, frame numbers along top/bottom edges)
+    render120EdgeElements(fs, fp, fs_width);
 
     // grain
     const grain_color = color(fp.sprocket_hole_color);
@@ -605,210 +759,87 @@ function renderFilmstrip120(images, options=DEFAULT_FILMSTRIP_OPTIONS) {
         fs.blend(fs_blur, 0, 0, fs_width_int, fs_height_int, 0, 0, fs_width_int, fs_height_int, SOFT_LIGHT);
     }
 
-    // images
-    let x = HPADDING_120_PX;
-    for (let img of images) {
-        fs.image(img, x, VPADDING_120_PX, shot_width_px, SHOT_HEIGHT_120_PX);
-        x += cycle_w;
+    // draw images (with optional TLR rotation; Free uses exact aspect, fixed uses cover-fit)
+    for (let i = 0; i < slots.length; i++) {
+        const s = slots[i];
+        drawImageCoverFit(fs, images[i], s.x, VPADDING_120_PX, s.width, SHOT_HEIGHT_120_PX, rotation);
     }
 
-    return fs;
+    return { graphics: fs, frame_ends: frame_ends };
 }
 
-// Renders the 120 contact sheet as vertical strips (column-major order).
-//
-// The 820mm backing paper has 18 equally-spaced markers (~45.6mm apart).
-// Photo frames are placed at format-dependent intervals (6x6=56mm, 6x7=69.5mm, etc.).
-// These two spacings are independent — the markers do NOT align with frame edges.
-//
-// Each strip covers exactly 820/num_cols mm of the backing paper, so all 18 markers
-// appear across the full contact sheet (6 per column for 3-col layout).
-function renderContactSheet120(fp, num_cols, padding_mm, strip_spacing_mm = 2.0) {
-    const shot_travel_mm = MEDIUM_FORMAT_WIDTHS_MM[fp.medium_format || '6x6'];
-    const shot_width_px  = SHOT_HEIGHT_120_PX; // 56mm across film
+// ── Contact sheet (slices of the filmstrip) ──────────────────────────────────
 
-    // Total exposed film length = actual frames × per-frame travel.
-    // 18 markers are spread across this length (not the full 820mm backing paper),
-    // so marker_interval = total_used_mm / 18.
-    // col_length = total_used_mm / num_cols = exactly frames_per_col frames per column.
-    const total_markers   = 18;
-    const total_used_mm   = images.length * shot_travel_mm;
-    const col_length_mm   = total_used_mm / num_cols;
-    const col_height_px   = col_length_mm * SCALE_120;
-    // 18 markers divide the full strip into 19 equal parts.
-    // Marker m (1..18) sits at m * interval from the start of the film.
-    const marker_interval_mm = total_used_mm / (total_markers + 1);
+function renderContactSheet120(fs, fp, num_strips, padding_mm, strip_spacing_mm, frame_ends) {
+    strip_spacing_mm = strip_spacing_mm || 2.0;
+    const orientation   = get120Orientation();
+    const padding_px    = padding_mm * SCALE_120;
+    const spacing_px    = strip_spacing_mm * SCALE_120;
+    const fs_h          = fs.height;   // = FINAL_HEIGHT_120
 
-    // Small gap between frames (backing paper between exposures)
-    const frame_gap_mm = VPADDING_120_MM;
-    const shot_size_mm = shot_travel_mm - 2 * frame_gap_mm; // rendered image height
+    // ── Compute per-strip slices at frame boundaries ────────────────────
+    // Distribute frames evenly; each slice boundary sits between two frames
+    // so that no image is split across strips.
+    const total_frames    = frame_ends.length;
+    const frames_per_strip = Math.max(1, Math.ceil(total_frames / num_strips));
+    let slices = [];   // { src_x, width }
+    for (let s = 0; s < num_strips; s++) {
+        const start_f = s * frames_per_strip;
+        if (start_f >= total_frames) break;
+        const end_f   = Math.min((s + 1) * frames_per_strip, total_frames);
+        const src_x   = start_f === 0 ? 0 : frame_ends[start_f - 1];
+        const src_end = frame_ends[end_f - 1];
+        slices.push({ src_x: src_x, width: src_end - src_x });
+    }
+    const actual_strips = slices.length;
+    const max_slice_w   = Math.max(...slices.map(s => s.width));
 
-    const edge_pad_px      = HPADDING_120_PX;
-    const strip_w          = shot_width_px + 2 * edge_pad_px;
-    const strip_spacing_px = strip_spacing_mm * SCALE_120;
-    const padding_px       = padding_mm * SCALE_120;
-    const cs_width         = num_cols * strip_w + (num_cols - 1) * strip_spacing_px + 2 * padding_px;
-    const cs_height        = col_height_px + 2 * padding_px;
+    let cs, cw, ch;
 
-    let cs = createGraphics(cs_width, cs_height);
-    cs.background(0);
-
-    // Helper: flip a local_mm position so the strip runs bottom-to-top.
-    // Original top-to-bottom: y = padding_px + local_mm * SCALE_120
-    // Flipped bottom-to-top:  y = padding_px + col_height_px - local_mm * SCALE_120
-    const flipY = (local_mm) => padding_px + col_height_px - local_mm * SCALE_120;
-
-    for (let c = 0; c < num_cols; c++) {
-        const strip_x       = padding_px + c * (strip_w + strip_spacing_px);
-        const film_start_mm = c * col_length_mm;
-
-        // Place each photo at its absolute film position (bottom-to-top, images upright).
-        const img_h = shot_size_mm * SCALE_120;
-        for (let idx = 0; idx < images.length; idx++) {
-            const abs_mm = idx * shot_travel_mm;
-            if (abs_mm < film_start_mm || abs_mm >= film_start_mm + col_length_mm) continue;
-            const local_mm = abs_mm - film_start_mm;
-            const img_x    = strip_x + edge_pad_px;
-            const img_y    = flipY(local_mm + frame_gap_mm + shot_size_mm);
-            cs.image(images[idx], img_x, img_y, shot_width_px, img_h);
+    if (orientation === 'landscape') {
+        // Stack horizontal slices as rows (widest slice sets canvas width)
+        cw = max_slice_w + 2 * padding_px;
+        ch = actual_strips * fs_h + (actual_strips - 1) * spacing_px + 2 * padding_px;
+        cs = createGraphics(cw, ch);
+        cs.background(0);
+        for (let r = 0; r < actual_strips; r++) {
+            const sl = slices[r];
+            const dst_y = padding_px + r * (fs_h + spacing_px);
+            cs.image(fs, padding_px, dst_y, sl.width, fs_h, sl.src_x, 0, sl.width, fs_h);
         }
-
-        // Find markers (m=1..18) that fall within this column's film range.
-        const first_m = Math.max(1,  Math.ceil(film_start_mm / marker_interval_mm));
-        const last_m  = Math.min(18, Math.floor((film_start_mm + col_length_mm - 0.001) / marker_interval_mm));
-
-        // Draw side elements (flipped bottom-to-top)
-        if (fp.side_elements) {
-            for (let el of fp.side_elements) {
-                const is_left = el.side !== 'right';
-                const cx = is_left
-                    ? strip_x + edge_pad_px / 2
-                    : strip_x + strip_w - edge_pad_px / 2;
-
-                if (el.type === ElementType.LABEL) {
-                    const lbl_count = el.label_count || 16;
-                    const n_labels = 2 * lbl_count; // text, code, text, code, ...
-                    const start_num = el.start_num || 41;
-                    const end_num = el.end_num || (start_num + lbl_count - 1);
-                    const label_interval_mm = total_used_mm / n_labels;
-                    cs.fill(el.color);
-                    cs.noStroke();
-                    cs.textSize(el.height_mm * SCALE_120);
-                    cs.textFont(FONTS_CACHE[el.font]);
-                    cs.textStyle(el.font_style === 'bold' ? BOLD : NORMAL);
-                    cs.textAlign(CENTER, CENTER);
-                    for (let i = 0; i < n_labels; i++) {
-                        const abs_mm = (i + 0.5) * label_interval_mm;
-                        if (abs_mm < film_start_mm || abs_mm >= film_start_mm + col_length_mm) continue;
-                        const local_mm  = abs_mm - film_start_mm;
-                        const user_code = (document.getElementById('film120Date').value || '').trim();
-                        const seq_num = String(start_num + Math.floor(i / 2));
-                        const code_str = el.fixed_code ? (user_code || el.label_code || el.text) : (user_code || seq_num);
-                        const label_str = (i % 2 === 0) ? code_str : el.text;
-                        cs.push();
-                        cs.translate(cx, flipY(local_mm));
-                        cs.rotate(-HALF_PI);
-                        cs.text(label_str, 0, 0);
-                        cs.pop();
-                    }
-                } else if (el.type === ElementType.FRAME_COUNT) {
-                    const margin_px = (el.margin_mm || 0) * SCALE_120;
-                    const below = el.below || false;
-                    cs.fill(el.color);
-                    cs.noStroke();
-                    cs.textSize(el.height_mm * SCALE_120);
-                    cs.textFont(FONTS_CACHE[el.font]);
-                    cs.textStyle(el.font_style === 'bold' ? BOLD : NORMAL);
-                    cs.textAlign(CENTER, CENTER);
-                    for (let m = first_m; m <= last_m; m++) {
-                        const marker_mm  = m * marker_interval_mm;
-                        const marker_y   = flipY(marker_mm - film_start_mm);
-                        const marker_num = m;
-                        cs.push();
-                        cs.translate(cx, marker_y + (below ? margin_px : -margin_px));
-                        cs.rotate(-HALF_PI);
-                        cs.text(marker_num.toString(), 0, 0);
-                        cs.pop();
-                    }
-                } else if (el.type === ElementType.ARROW) {
-                    const ah        = (el.height_mm || 4) * SCALE_120;
-                    const aw        = (el.width_mm || 2) * SCALE_120;
-                    const margin_px = (el.margin_mm || 0) * SCALE_120;
-                    cs.fill(el.color);
-                    cs.noStroke();
-                    for (let m = first_m; m <= last_m; m++) {
-                        const marker_mm = m * marker_interval_mm;
-                        const marker_y  = flipY(marker_mm - film_start_mm);
-                        const base_y    = marker_y - margin_px;
-                        if (el.arrow_down) {
-                            // ▼ pointing down
-                            cs.triangle(cx - aw/2, base_y, cx + aw/2, base_y, cx, base_y + ah);
-                        } else {
-                            // ▲ pointing up
-                            cs.triangle(cx - aw/2, base_y, cx + aw/2, base_y, cx, base_y - ah);
-                        }
-                    }
-                } else if (el.type === ElementType.ARROW_NUMBERED) {
-                    // Pattern: ▲, ▲1, ▲, ▲2, ..., ▲, ▲12, ▲, X (26 items equally spaced)
-                    const max_frame = el.max_frame || 12;
-                    const n_items = 2 * max_frame + 2; // 26 for max_frame=12
-                    const ah = (el.arrow_height_mm || 2.5) * SCALE_120;
-                    const aw = (el.arrow_width_mm || 1.2) * SCALE_120;
-                    const nh = (el.num_height_mm || 1.4) * SCALE_120;
-                    const item_interval_mm = total_used_mm / n_items;
-
-                    cs.fill(el.color);
-                    cs.noStroke();
-                    cs.textFont(FONTS_CACHE[el.font]);
-                    cs.textStyle(el.font_style === 'bold' ? BOLD : NORMAL);
-                    cs.textSize(nh);
-                    cs.textAlign(CENTER, CENTER);
-
-                    for (let i = 0; i < n_items; i++) {
-                        const abs_mm = (i + 0.5) * item_interval_mm;
-                        if (abs_mm < film_start_mm || abs_mm >= film_start_mm + col_length_mm) continue;
-                        const local_mm = abs_mm - film_start_mm;
-                        const y = flipY(local_mm);
-
-                        if (i === n_items - 1) {
-                            // Last item: X
-                            cs.push();
-                            cs.translate(cx, y);
-                            cs.rotate(-HALF_PI);
-                            cs.text('X', 0, 0);
-                            cs.pop();
-                        } else {
-                            // Draw arrow ▲
-                            cs.triangle(cx - aw/2, y, cx + aw/2, y, cx, y - ah);
-                            // Odd indices (1, 3, 5, ...) get a number after the arrow
-                            if (i % 2 === 1) {
-                                const frame_num = Math.floor(i / 2) + 1;
-                                cs.push();
-                                cs.translate(cx, y - ah - nh * 0.5);
-                                cs.rotate(-HALF_PI);
-                                cs.text(frame_num.toString(), 0, 0);
-                                cs.pop();
-                            }
-                        }
-                    }
-                }
-            }
+    } else {
+        // Portrait: rotate each slice 90° CCW → columns (frame 1 at bottom)
+        // Each column's height = that slice's width (may vary for Free format).
+        const col_w   = fs_h;
+        const max_col_h = max_slice_w;
+        cw = actual_strips * col_w + (actual_strips - 1) * spacing_px + 2 * padding_px;
+        ch = max_col_h + 2 * padding_px;
+        cs = createGraphics(cw, ch);
+        cs.background(0);
+        for (let c = 0; c < actual_strips; c++) {
+            const sl = slices[c];
+            const col_x = padding_px + c * (col_w + spacing_px);
+            cs.push();
+            cs.translate(col_x, padding_px + max_col_h);
+            cs.rotate(-HALF_PI);
+            cs.image(fs, 0, 0, sl.width, fs_h, sl.src_x, 0, sl.width, fs_h);
+            cs.pop();
         }
     }
 
-    // grain
+    // grain (on the contact sheet canvas)
     const grain_color = color(fp.sprocket_hole_color);
-    const cw = Math.round(cs_width), ch = Math.round(cs_height);
-    let grain_map = createImage(cw, ch);
+    const gcw = Math.round(cw), gch = Math.round(ch);
+    let grain_map = createImage(gcw, gch);
     grain_map.loadPixels();
-    const N = 4 * cw * ch;
+    const N = 4 * gcw * gch;
     const gr = red(grain_color), gg = green(grain_color), gb = blue(grain_color);
     for (let i = 0; i < N; i += 4) {
         grain_map.pixels[i] = gr; grain_map.pixels[i+1] = gg;
         grain_map.pixels[i+2] = gb; grain_map.pixels[i+3] = randrange(0, 50);
     }
     grain_map.updatePixels();
-    cs.blend(grain_map, 0, 0, cw, ch, 0, 0, cw, ch, ADD);
+    cs.blend(grain_map, 0, 0, gcw, gch, 0, 0, gcw, gch, ADD);
 
     return cs;
 }
@@ -931,7 +962,14 @@ function previewDraw() {
     let is120 = fp.format === '120';
 
     // draw filmstrip
-    let fs = is120 ? renderFilmstrip120(images) : renderFilmstrip(images);
+    let fs, frame_ends;
+    if (is120) {
+        const result = renderFilmstrip120(images);
+        fs = result.graphics;
+        frame_ends = result.frame_ends;
+    } else {
+        fs = renderFilmstrip(images);
+    }
     let fsimg = document.getElementById('filmstripimg');
     fs.canvas.toBlob(function(blob) {
         let url = URL.createObjectURL(blob);
@@ -942,10 +980,18 @@ function previewDraw() {
     // draw contact sheet
     let cs;
     if (is120) {
-        const shot_width_px = MEDIUM_FORMAT_WIDTHS_MM[fp.medium_format || '6x6'] * SCALE_120;
-        const cycle_w = shot_width_px + HPADDING_120_PX;
-        const num_cols_120 = { '6x4.5': 4, '6x6': 3, '6x7': 2, '6x9': 2 }[fp.medium_format || '6x6'] || 3;
-        cs = renderContactSheet120(fp, num_cols_120, 3);
+        const format_120 = get120Format();
+        const orientation_120 = get120Orientation();
+        const num_strips_map = orientation_120 === 'landscape'
+            ? NUM_STRIPS_120_HORIZONTAL
+            : NUM_STRIPS_120_VERTICAL;
+        let num_strips_120;
+        if (format_120 === 'free') {
+            num_strips_120 = Math.max(1, Math.ceil(images.length / 4));
+        } else {
+            num_strips_120 = num_strips_map[format_120] || 3;
+        }
+        cs = renderContactSheet120(fs, fp, num_strips_120, 3, 2.0, frame_ends);
     } else {
         const burned_leader = document.getElementById('burnedLeaderCheck')?.checked || false;
         const lw = (burned_leader && BURNED_LEADER_IMG)

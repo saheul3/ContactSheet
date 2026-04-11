@@ -78,10 +78,30 @@ const RepeatType = {
 // Per-frame pitch along the film (image height + 2mm edge top + 2mm edge bottom).
 // e.g. 6x6: 56mm image + 4mm edges = 60mm pitch.
 const MEDIUM_FORMAT_WIDTHS_MM = {
-    '6x4.5': 46,   // 42 + 4
-    '6x6':   60,   // 56 + 4
-    '6x7':   73.5, // 69.5 + 4
-    '6x9':   88,   // 84 + 4
+    '6x4.5': 46,    // 42 + 4
+    '6x6':   60,    // 56 + 4
+    '6x7':   73.5,  // 69.5 + 4
+    '6x8':   80,    // 76 + 4
+    '6x9':   88,    // 84 + 4
+    '6x12':  116,   // 112 + 4
+    '6x17':  172,   // 168 + 4
+};
+
+// Standard number of exposures per format on a 120 roll
+const STANDARD_EXPOSURES_120 = {
+    '6x4.5': 16, '6x6': 12, '6x7': 10, '6x8': 9,
+    '6x9':    8, '6x12': 6, '6x17': 4,
+};
+
+// Number of strips for the 120 contact sheet per format + orientation.
+// Must divide STANDARD_EXPOSURES_120 cleanly for even slicing.
+const NUM_STRIPS_120_VERTICAL = {
+    '6x4.5': 4, '6x6': 3, '6x7': 2, '6x8': 3,
+    '6x9':   2, '6x12': 2, '6x17': 1,
+};
+const NUM_STRIPS_120_HORIZONTAL = {
+    '6x4.5': 4, '6x6': 4, '6x7': 2, '6x8': 3,
+    '6x9':   2, '6x12': 2, '6x17': 1,
 };
 
 // create a dictionary of film stock properties

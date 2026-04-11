@@ -71,9 +71,11 @@ function selectFilmStock(select_id) {
         buttons[i].classList.remove("active");
     }
     document.getElementById(select_id).classList.add("active");
-    const is120 = FILM[select_id] && FILM[select_id].format === '120';
+    const fp = FILM[select_id];
+    const is120 = fp && fp.format === '120';
     document.getElementById('film120Options').classList.toggle('hidden', !is120);
     document.getElementById('burnedLeaderOptions').classList.toggle('hidden', is120);
+    // Don't override format dropdown — let the user's selection (default: Free) persist.
 }
 
 // MARK: js check if document is ready

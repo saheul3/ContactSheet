@@ -81,7 +81,30 @@ layout: default
             </div>
         </div>
         <div id="film120Options" class="hidden" style="padding: 4px 0;">
-            <label for="film120Date" style="font-size:11px;">Film code</label><br>
+            <label for="film120Format" style="font-size:11px;">Format</label><br>
+            <select id="film120Format" onchange="previewDraw()" style="width:100%; font-size:11px;">
+                <option value="free" selected>Free (default)</option>
+                <option value="6x4.5">6×4.5</option>
+                <option value="6x6">6×6</option>
+                <option value="6x7">6×7</option>
+                <option value="6x8">6×8</option>
+                <option value="6x9">6×9</option>
+                <option value="6x12">6×12</option>
+                <option value="6x17">6×17</option>
+            </select>
+            <label style="font-size:11px; margin-top:4px; display:block;">Layout</label>
+            <input type="radio" name="film120Orientation" id="film120OrientationP" value="portrait" checked onchange="previewDraw()">
+            <label for="film120OrientationP" style="font-size:11px;">Portrait</label>
+            <input type="radio" name="film120Orientation" id="film120OrientationL" value="landscape" onchange="previewDraw()">
+            <label for="film120OrientationL" style="font-size:11px;">Landscape</label>
+            <br>
+            <label style="font-size:11px; margin-top:4px; display:block;">Camera</label>
+            <input type="radio" name="film120Camera" id="film120CameraSLR" value="slr" checked onchange="previewDraw()">
+            <label for="film120CameraSLR" style="font-size:11px;">SLR</label>
+            <input type="radio" name="film120Camera" id="film120CameraTLR" value="tlr" onchange="previewDraw()">
+            <label for="film120CameraTLR" style="font-size:11px;">TLR</label>
+            <br>
+            <label for="film120Date" style="font-size:11px;">Film code (optional)</label><br>
             <input type="text" id="film120Date" placeholder="e.g. 0303" style="width:100%; font-size:11px;">
         </div>
         <div id="burnedLeaderOptions" style="padding: 4px 0;">

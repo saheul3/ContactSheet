@@ -142,53 +142,31 @@ function addUploaderEventListener() {
 }
 
 
-function scaleImage(img, maxHeight) {
+// Downscale `img` so its SHORT side is at most `maxShort`, preserving the
+// original orientation (no implicit 90° rotation of portraits).  This matches
+// the pixel area of the previous implementation (which capped landscape height
+// at `maxShort` = PREVIEW_HEIGHT, then rotated portraits into the same box).
+// Mixed landscape/portrait sources are now handled by cover-fit in the
+// renderers instead of by forcing portraits sideways.
+function scaleImage(img, maxShort) {
     let canvas = document.createElement('canvas');
     let ctx = canvas.getContext('2d');
 
-    let width = img.width;
+    let width  = img.width;
     let height = img.height;
 
-    // if landscape
-    if (width > height) {
-        // 
-
-        // Calculate the new dimensions
-        if (height > maxHeight) {
-            width *= maxHeight / height;
-            height = maxHeight;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        // Draw the scaled image
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Convert canvas to an image
-        let scaledImage = new Image();
-        scaledImage.src = canvas.toDataURL();
-
-        return scaledImage;
-    } else { // rotate image
-        // Calculate the new dimensions
-        if (width > maxHeight) {
-            height *= maxHeight / width;
-            width = maxHeight;
-        }
-
-        canvas.width = height;
-        canvas.height = width;
-
-        // Draw the scaled image
-        ctx.translate(height, 0);
-        ctx.rotate(90 * Math.PI / 180);
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Convert canvas to an image
-        let scaledImage = new Image();
-        scaledImage.src = canvas.toDataURL();
-
-        return scaledImage;
+    const shortSide = Math.min(width, height);
+    if (shortSide > maxShort) {
+        const s = maxShort / shortSide;
+        width  = Math.round(width  * s);
+        height = Math.round(height * s);
     }
+
+    canvas.width  = width;
+    canvas.height = height;
+    ctx.drawImage(img, 0, 0, width, height);
+
+    let scaledImage = new Image();
+    scaledImage.src = canvas.toDataURL();
+    return scaledImage;
 }
