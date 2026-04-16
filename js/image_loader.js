@@ -1,5 +1,9 @@
 function uploadImages(event) {
-    let files = Array.from(event.target.files);
+    let files = Array.from(event.target.files).filter(f => {
+        // Exclude files in subdirectories (only keep top-level files)
+        const parts = f.webkitRelativePath.split('/');
+        return parts.length <= 2;
+    });
     let preview = document.getElementById('imagePreview');
     preview.innerHTML = '';
     let num_images = files.length;
@@ -32,7 +36,7 @@ function uploadImages(event) {
         reader.onload = function(e) {
             let img = new Image();
             img.onload = function() {
-                let scaledImage = scaleImage(img, PREVIEW_HEIGHT);
+                let scaledImage = scaleImage(img, PREVIEW_HEIGHT, num_images >= 20);
                 images.push({name: file.name, image: scaledImage});
 
                 num_images_loaded++;
@@ -142,18 +146,17 @@ function addUploaderEventListener() {
 }
 
 
-// Downscale `img` so its SHORT side is at most `maxShort`, preserving the
-// original orientation (no implicit 90° rotation of portraits).  This matches
-// the pixel area of the previous implementation (which capped landscape height
-// at `maxShort` = PREVIEW_HEIGHT, then rotated portraits into the same box).
-// Mixed landscape/portrait sources are now handled by cover-fit in the
-// renderers instead of by forcing portraits sideways.
-function scaleImage(img, maxShort) {
+// Downscale `img` so its SHORT side is at most `maxShort`.
+// When `forceRotate` is true, portrait images are rotated 90° CW to landscape.
+// This is used for 35mm (20+ images) where all frames must be horizontal.
+function scaleImage(img, maxShort, forceRotate) {
     let canvas = document.createElement('canvas');
     let ctx = canvas.getContext('2d');
 
     let width  = img.width;
     let height = img.height;
+    const isPortrait = height > width;
+    const rotate = forceRotate && isPortrait;
 
     const shortSide = Math.min(width, height);
     if (shortSide > maxShort) {
@@ -162,8 +165,15 @@ function scaleImage(img, maxShort) {
         height = Math.round(height * s);
     }
 
-    canvas.width  = width;
-    canvas.height = height;
+    if (rotate) {
+        canvas.width  = height;
+        canvas.height = width;
+        ctx.translate(height, 0);
+        ctx.rotate(90 * Math.PI / 180);
+    } else {
+        canvas.width  = width;
+        canvas.height = height;
+    }
     ctx.drawImage(img, 0, 0, width, height);
 
     let scaledImage = new Image();

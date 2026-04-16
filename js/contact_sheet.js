@@ -512,10 +512,13 @@ function get120Camera() {
     return (el && el.value) || 'slr';
 }
 
-// TLR cameras capture images rotated 90° CW from the intended scene.
-// SLR: no rotation (0°).  TLR: rotate 90° CW on the filmstrip.
-function getImageRotation(isTLR) {
-    return isTLR ? 90 : 0;
+// SLR: no rotation (0°).
+// SLR(Half): rotate 90° CCW on the filmstrip (270° CW).
+// TLR: rotate 90° CW on the filmstrip.
+function getImageRotation(camera) {
+    if (camera === 'tlr') return 90;
+    if (camera === 'slr-half') return 270;
+    return 0;
 }
 
 // ── Edge-element renderers (drawn on the horizontal filmstrip) ───────────────
@@ -687,9 +690,10 @@ function renderFilmstrip120(images, options = DEFAULT_FILMSTRIP_OPTIONS) {
     let fp = FILM[filmstock_el.id];
 
     const format  = get120Format();
-    const isTLR   = get120Camera() === 'tlr';
+    const camera  = get120Camera();
+    const isTLR   = camera === 'tlr';
     const isFree  = format === 'free';
-    const rotation = getImageRotation(isTLR);
+    const rotation = getImageRotation(camera);
 
     // ── Per-image layout: compute position, width ───────────────────────
     let slots = [];        // { x, width }
@@ -794,34 +798,60 @@ function renderContactSheet120(fs, fp, num_strips, padding_mm, strip_spacing_mm,
     const actual_strips = slices.length;
     const max_slice_w   = Math.max(...slices.map(s => s.width));
 
+    const handPlaced = document.getElementById('handPlacedCheck')?.checked || false;
     let cs, cw, ch;
 
     if (orientation === 'landscape') {
         // Stack horizontal slices as rows (widest slice sets canvas width)
-        cw = max_slice_w + 2 * padding_px;
-        ch = actual_strips * fs_h + (actual_strips - 1) * spacing_px + 2 * padding_px;
+        const jitter_extra = handPlaced ? padding_px * 0.4 : 0;
+        cw = max_slice_w + 2 * padding_px + jitter_extra;
+        ch = actual_strips * fs_h + (actual_strips - 1) * spacing_px + 2 * padding_px + jitter_extra;
         cs = createGraphics(cw, ch);
         cs.background(0);
         for (let r = 0; r < actual_strips; r++) {
             const sl = slices[r];
+            const dst_x = padding_px;
             const dst_y = padding_px + r * (fs_h + spacing_px);
-            cs.image(fs, padding_px, dst_y, sl.width, fs_h, sl.src_x, 0, sl.width, fs_h);
+            if (handPlaced) {
+                const jx = randrange(-1.5, 1.5) * SCALE_120;
+                const jy = randrange(-1.5, 1.5) * SCALE_120;
+                const ja = randrange(-0.4, 0.4) * Math.PI / 180;
+                cs.push();
+                cs.translate(dst_x + jx, dst_y + jy);
+                cs.rotate(ja);
+                cs.image(fs, 0, 0, sl.width, fs_h, sl.src_x, 0, sl.width, fs_h);
+                cs.pop();
+            } else {
+                cs.image(fs, dst_x, dst_y, sl.width, fs_h, sl.src_x, 0, sl.width, fs_h);
+            }
         }
     } else {
-        // Portrait: rotate each slice 90° CCW → columns (frame 1 at bottom)
-        // Each column's height = that slice's width (may vary for Free format).
+        // Portrait: rotate each slice → columns.
+        // SLR(Half): rotate CW 90° (frame 1 at top).
+        // Others:    rotate CCW 90° (frame 1 at bottom).
+        const camera  = get120Camera();
+        const rotateCW = camera === 'slr-half';
         const col_w   = fs_h;
         const max_col_h = max_slice_w;
-        cw = actual_strips * col_w + (actual_strips - 1) * spacing_px + 2 * padding_px;
-        ch = max_col_h + 2 * padding_px;
+        const jitter_extra = handPlaced ? padding_px * 0.4 : 0;
+        cw = actual_strips * col_w + (actual_strips - 1) * spacing_px + 2 * padding_px + jitter_extra;
+        ch = max_col_h + 2 * padding_px + jitter_extra;
         cs = createGraphics(cw, ch);
         cs.background(0);
         for (let c = 0; c < actual_strips; c++) {
             const sl = slices[c];
             const col_x = padding_px + c * (col_w + spacing_px);
+            const jx = handPlaced ? randrange(-1.5, 1.5) * SCALE_120 : 0;
+            const jy = handPlaced ? randrange(-1.5, 1.5) * SCALE_120 : 0;
+            const ja = handPlaced ? randrange(-0.4, 0.4) * Math.PI / 180 : 0;
             cs.push();
-            cs.translate(col_x, padding_px + max_col_h);
-            cs.rotate(-HALF_PI);
+            if (rotateCW) {
+                cs.translate(col_x + col_w + jx, padding_px + jy);
+                cs.rotate(HALF_PI + ja);
+            } else {
+                cs.translate(col_x + jx, padding_px + max_col_h + jy);
+                cs.rotate(-HALF_PI + ja);
+            }
             cs.image(fs, 0, 0, sl.width, fs_h, sl.src_x, 0, sl.width, fs_h);
             cs.pop();
         }
@@ -928,8 +958,10 @@ function renderFilmstrip(images, options=DEFAULT_FILMSTRIP_OPTIONS) {
 function renderContactSheet(filmstrip, num_cols, padding_mm, strip_spacing_mm = 1.5, leader_w = 0) {
     let padding_px = padding_mm * SCALE;
     let strip_spacing_px = strip_spacing_mm * SCALE;
-    let cs_width = num_cols * (SHOT_WIDTH_PX + HPADDING_PX) - HPADDING_PX + 2 * padding_px + leader_w;
-    let cs_height = Math.ceil(images.length / num_cols) * (filmstrip.height + strip_spacing_px) - strip_spacing_px + 2 * padding_px;
+    const handPlaced = document.getElementById('handPlacedCheck')?.checked || false;
+    const jitter_extra = handPlaced ? padding_px * 0.4 : 0;
+    let cs_width = num_cols * (SHOT_WIDTH_PX + HPADDING_PX) - HPADDING_PX + 2 * padding_px + leader_w + jitter_extra;
+    let cs_height = Math.ceil(images.length / num_cols) * (filmstrip.height + strip_spacing_px) - strip_spacing_px + 2 * padding_px + jitter_extra;
     let cs = createGraphics(cs_width, cs_height);
 
     cs.background(0);
@@ -941,7 +973,17 @@ function renderContactSheet(filmstrip, num_cols, padding_mm, strip_spacing_mm = 
         let start_x = padding_px + randrange(0.2, 0.8) * HPADDING_PX;
         let x = j * num_cols * (SHOT_WIDTH_PX + HPADDING_PX) + HPADDING_PX + (j > 0 ? leader_w : 0);
         let y = j * (filmstrip.height + strip_spacing_px);
-        cs.image(filmstrip, start_x - x, y);
+        if (handPlaced) {
+            let jitter_y = randrange(-1.5, 1.5) * SCALE;
+            let jitter_angle = randrange(-0.4, 0.4) * Math.PI / 180;
+            cs.push();
+            cs.translate(start_x - x, y + jitter_y);
+            cs.rotate(jitter_angle);
+            cs.image(filmstrip, 0, 0);
+            cs.pop();
+        } else {
+            cs.image(filmstrip, start_x - x, y);
+        }
     }
     cs.pop();
 
@@ -970,10 +1012,16 @@ function previewDraw() {
     } else {
         fs = renderFilmstrip(images);
     }
+    // Build filename slug from film stock key (e.g., "kodak-portra-400")
+    const stock_slug = filmstock_el.id;
+    const fs_filename = `${stock_slug}_preview.png`;
+    const cs_filename = `${stock_slug}_contactsheet.png`;
+
     let fsimg = document.getElementById('filmstripimg');
     fs.canvas.toBlob(function(blob) {
         let url = URL.createObjectURL(blob);
         fsimg.src = url;
+        fsimg.alt = fs_filename;
     });
     fsimg.style.display = 'block';
 
@@ -1004,6 +1052,7 @@ function previewDraw() {
     cs.canvas.toBlob(function(blob) {
         let url = URL.createObjectURL(blob);
         csimg.src = url;
+        csimg.alt = cs_filename;
 
         // to make contact sheet downloadable
         // csimg.onload = function() {

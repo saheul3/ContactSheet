@@ -101,6 +101,8 @@ layout: default
             <label style="font-size:11px; margin-top:4px; display:block;">Camera</label>
             <input type="radio" name="film120Camera" id="film120CameraSLR" value="slr" checked onchange="previewDraw()">
             <label for="film120CameraSLR" style="font-size:11px;">SLR</label>
+            <input type="radio" name="film120Camera" id="film120CameraSLRHalf" value="slr-half" onchange="previewDraw()">
+            <label for="film120CameraSLRHalf" style="font-size:11px;">SLR(Half)</label>
             <input type="radio" name="film120Camera" id="film120CameraTLR" value="tlr" onchange="previewDraw()">
             <label for="film120CameraTLR" style="font-size:11px;">TLR</label>
             <br>
@@ -110,6 +112,10 @@ layout: default
         <div id="burnedLeaderOptions" style="padding: 4px 0;">
             <input type="checkbox" id="burnedLeaderCheck">
             <label for="burnedLeaderCheck" style="font-size:11px;">Burned leader</label>
+        </div>
+        <div style="padding: 4px 0;">
+            <input type="checkbox" id="handPlacedCheck">
+            <label for="handPlacedCheck" style="font-size:11px;">Hand-placed</label>
         </div>
         <section style="text-align: right; padding-top: 4px;">
             <button onclick="showFilmstrip()">Continue</button>
@@ -135,7 +141,7 @@ layout: default
                 <!-- <p>Tip: use the scroll bar to scoll horizontally</p> -->
             </div>
             <div class="pb-2" style="overflow-x: scroll;">
-                <img src="#" alt="" id="filmstripimg">
+                <img src="#" alt="preview.png" id="filmstripimg">
             </div>
             <!-- <canvas class="my-3" id="p5canvas"></canvas> -->
         </div>
@@ -152,7 +158,7 @@ layout: default
         </div>
     </div>
     <div class="window-body">
-        <img src="#" alt="" id="contactsheetimg">
+        <img src="#" alt="contactsheet.png" id="contactsheetimg">
     </div>
 </div>
 

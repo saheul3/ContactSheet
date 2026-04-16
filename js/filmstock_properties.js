@@ -106,6 +106,184 @@ const NUM_STRIPS_120_HORIZONTAL = {
 
 // create a dictionary of film stock properties
 const FILM = {
+    'fuji-100': {
+        'name': 'Fujifilm 100',
+        'icon': 'fuji100_icon.png',
+        'enabled': true,
+        'dx_code': '015250',
+        'start_frame': -1,
+        'top_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'FUJI',
+                'font': FONTS.sans,
+                'font_style': 'bold',
+                'color': '#dcaf7b',
+                'height_mm': 1.4,
+                'margin_mm': 0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.6,
+            },
+            {
+                'type': ElementType.LABEL,
+                'text': '100',
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.4,
+                'margin_mm': 0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.71,
+            },
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.4,
+                'margin_mm': 0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+            {
+                'type': ElementType.IMAGE,
+                'src': 'assets/fuji_batch_label.jpg',
+                'tint': '#c02527',
+                'height_mm': 2.1,
+                'width_mm': 20.2,
+                'margin_mm': 0.1,
+                'repeat': RepeatType.NONE,
+                'offset': 3,
+            }
+        ],
+        'bottom_elements': [
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.65,
+                'margin_mm': 0.15,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+            {
+                'type': ElementType.FRAME_COUNT_ALT,
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.1,
+                'margin_mm': 0.73,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.9,
+            },
+            {
+                'type': ElementType.ARROW,
+                'color': '#dcaf7b',
+                'margin_mm': 0.32,
+                'offset': 0.882,
+                'head_width_mm': 1.43,
+                'head_height_mm': 0.55,
+                'has_tail': true,
+                'tail_width_mm': 2.34,
+                'tail_height_mm': 0.2,
+            },
+            {
+                'type': ElementType.DX,
+                'color': '#dcaf7b',
+                'height_mm': 2.2,
+                'width_mm': 12.65,
+                'repeat': RepeatType.FRAME,
+                'offset': -0.06,
+            }
+        ],
+        'sprocket_hole_color': '#b49342',
+    },
+    'fuji-200': {
+        'name': 'Fujifilm 200',
+        'icon': 'fuji200_icon.png',
+        'enabled': true,
+        'dx_code': '015260',
+        'start_frame': -1,
+        'top_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'FUJI',
+                'font': FONTS.sans,
+                'font_style': 'bold',
+                'color': '#dcaf7b',
+                'height_mm': 1.4,
+                'margin_mm': 0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.6,
+            },
+            {
+                'type': ElementType.LABEL,
+                'text': '200',
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.4,
+                'margin_mm': 0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.71,
+            },
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.4,
+                'margin_mm': 0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+            {
+                'type': ElementType.IMAGE,
+                'src': 'assets/fuji_batch_label.jpg',
+                'tint': '#c02527',
+                'height_mm': 2.1,
+                'width_mm': 20.2,
+                'margin_mm': 0.1,
+                'repeat': RepeatType.NONE,
+                'offset': 3,
+            }
+        ],
+        'bottom_elements': [
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.65,
+                'margin_mm': 0.15,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+            {
+                'type': ElementType.FRAME_COUNT_ALT,
+                'font': FONTS.sans,
+                'color': '#dcaf7b',
+                'height_mm': 1.1,
+                'margin_mm': 0.73,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.9,
+            },
+            {
+                'type': ElementType.ARROW,
+                'color': '#dcaf7b',
+                'margin_mm': 0.32,
+                'offset': 0.882,
+                'head_width_mm': 1.43,
+                'head_height_mm': 0.55,
+                'has_tail': true,
+                'tail_width_mm': 2.34,
+                'tail_height_mm': 0.2,
+            },
+            {
+                'type': ElementType.DX,
+                'color': '#dcaf7b',
+                'height_mm': 2.2,
+                'width_mm': 12.65,
+                'repeat': RepeatType.FRAME,
+                'offset': -0.06,
+            }
+        ],
+        'sprocket_hole_color': '#b49342',
+    },
     'fuji-400': {
         'name': 'Fujifilm 400',
         'icon': 'fuji400_icon.png',
@@ -765,9 +943,232 @@ const FILM = {
     },
     'kodak-portra-400': {
         'name': 'Kodak Portra 400',
-        'icon': 'unknown_roll_icon.png',
-        'enabled': false,
-        'dx_code': -1,
+        'icon': 'kodakportra400_icon.png',
+        'enabled': true,
+        'dx_code': '512574',
+        'start_frame': 0,
+        'top_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'KODAK',
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.62,
+                'margin_mm': 0.0,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.60,
+            },
+            {
+                'type': ElementType.LABEL,
+                'text': 'PORTRA 400',
+                'font': FONTS.sans,
+                'font_style': 'bold',
+                'color': '#dcaf7b',
+                'height_mm': 1.6,
+                'margin_mm': 0.2,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.81,
+            },
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.62,
+                'margin_mm': 0.0,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+        ],
+        'bottom_elements': [
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 2.0,
+                'margin_mm': -0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+            {
+                'type': ElementType.FRAME_COUNT_ALT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.2,
+                'margin_mm': 0.55,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.9,
+            },
+            {
+                'type': ElementType.ARROW,
+                'color': '#dcaf7b',
+                'margin_mm': 0.32,
+                'offset': 0.882,
+                'head_width_mm': 1.43,
+                'head_height_mm': 0.55,
+                'has_tail': true,
+                'tail_width_mm': 2.34,
+                'tail_height_mm': 0.2,
+            },
+            {
+                'type': ElementType.DX,
+                'color': '#dcaf7b',
+                'height_mm': 2.2,
+                'width_mm': 12.65,
+                'repeat': RepeatType.FRAME,
+                'offset': -0.06,
+            }
+        ],
+        'sprocket_hole_color': '#b49342',
+    },
+    'kodak-ektar-100': {
+        'name': 'Kodak Ektar 100',
+        'icon': 'kodakektar100_icon.png',
+        'enabled': true,
+        'dx_code': '512564',
+        'start_frame': 0,
+        'top_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'KODAK',
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.62,
+                'margin_mm': 0.0,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.60,
+            },
+            {
+                'type': ElementType.LABEL,
+                'text': 'EKTAR 100',
+                'font': FONTS.sans,
+                'font_style': 'bold',
+                'color': '#dcaf7b',
+                'height_mm': 1.6,
+                'margin_mm': 0.2,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.81,
+            },
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.62,
+                'margin_mm': 0.0,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+        ],
+        'bottom_elements': [
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 2.0,
+                'margin_mm': -0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+            {
+                'type': ElementType.FRAME_COUNT_ALT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.2,
+                'margin_mm': 0.55,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.9,
+            },
+            {
+                'type': ElementType.ARROW,
+                'color': '#dcaf7b',
+                'margin_mm': 0.32,
+                'offset': 0.882,
+                'head_width_mm': 1.43,
+                'head_height_mm': 0.55,
+                'has_tail': true,
+                'tail_width_mm': 2.34,
+                'tail_height_mm': 0.2,
+            },
+            {
+                'type': ElementType.DX,
+                'color': '#dcaf7b',
+                'height_mm': 2.2,
+                'width_mm': 12.65,
+                'repeat': RepeatType.FRAME,
+                'offset': -0.06,
+            }
+        ],
+        'sprocket_hole_color': '#b49342',
+    },
+    'kodak-e100': {
+        'name': 'Kodak E100',
+        'icon': 'kodake100_icon.png',
+        'enabled': true,
+        'dx_code': '512584',
+        'start_frame': 0,
+        'top_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'KODAK',
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.62,
+                'margin_mm': 0.0,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.60,
+            },
+            {
+                'type': ElementType.LABEL,
+                'text': 'E100',
+                'font': FONTS.sans,
+                'font_style': 'bold',
+                'color': '#dcaf7b',
+                'height_mm': 1.6,
+                'margin_mm': 0.2,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.81,
+            },
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.62,
+                'margin_mm': 0.0,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+        ],
+        'bottom_elements': [
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 2.0,
+                'margin_mm': -0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.4,
+            },
+            {
+                'type': ElementType.FRAME_COUNT_ALT,
+                'font': FONTS.black,
+                'color': '#dcaf7b',
+                'height_mm': 1.2,
+                'margin_mm': 0.55,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.9,
+            },
+            {
+                'type': ElementType.ARROW,
+                'color': '#dcaf7b',
+                'margin_mm': 0.32,
+                'offset': 0.882,
+                'head_width_mm': 1.43,
+                'head_height_mm': 0.55,
+                'has_tail': true,
+                'tail_width_mm': 2.34,
+                'tail_height_mm': 0.2,
+            },
+        ],
+        'sprocket_hole_color': '#b49342',
     },
     'kodak-portra-160': {
         'name': 'Kodak Portra 160',
@@ -886,12 +1287,6 @@ const FILM = {
     },
     'kodak-trix-400': {
         'name': 'Kodak Tri-X 400',
-        'icon': 'unknown_roll_icon.png',
-        'enabled': false,
-        'dx_code': -1,
-    },
-    'kodak-ektar-100': {
-        'name': 'Kodak Ektar 100',
         'icon': 'unknown_roll_icon.png',
         'enabled': false,
         'dx_code': -1,
@@ -1170,6 +1565,41 @@ const FILM = {
         ],
         'sprocket_hole_color': '#b49342',
     },
+    'kodak-e100-120': {
+        'name': 'Kodak E100',
+        'icon': 'kodake100_120_icon.png',
+        'enabled': true,
+        'format': '120',
+        'medium_format': '6x6',
+        'dx_code': -1,
+        'start_frame': 1,
+        'side_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'KODAK E100',
+                'start_num': 41,
+                'end_num': 56,
+                'side': 'left',
+                'font': FONTS.sans,
+                'font_style': 'bold',
+                'color': '#dcaf7b',
+                'height_mm': 1.5,
+                'repeat': RepeatType.FRAME,
+            },
+            {
+                'type': ElementType.ARROW_NUMBERED,
+                'side': 'right',
+                'font': FONTS.sans,
+                'font_style': 'bold',
+                'color': '#dcaf7b',
+                'arrow_height_mm': 2.5,
+                'arrow_width_mm': 1.2,
+                'num_height_mm': 1.4,
+                'max_frame': 12,
+            },
+        ],
+        'sprocket_hole_color': '#b49342',
+    },
     'ilf-hp5-400-120': {
         'name': 'Ilford HP5 400',
         'icon': 'ilfordhp5plus400_120_icon.png',
@@ -1280,46 +1710,81 @@ function populateFilmStocks() {
     const filmstockContainer = document.getElementById('filmSelect');
     filmstockContainer.innerHTML = "";
 
-    // Use an array to preserve 35mm-first order (plain object keys like '120'
-    // get sorted as integer indices by JS engines, putting them before '35mm').
-    const groups = [
-        { label: '35mm', keys: [] },
-        { label: '120',  keys: [] },
+    const BRAND_MAP = {
+        'fuji':      'Fujifilm',
+        'ilf':       'Ilford',
+        'kentmere':  'Kentmere',
+        'kodak':     'Kodak',
+        'cinestill': 'CineStill',
+    };
+    const BRAND_ORDER = ['fuji', 'kodak', 'ilf', 'kentmere', 'cinestill'];
+
+    function getBrand(key) {
+        const prefix = key.split('-')[0];
+        return BRAND_MAP[prefix] ? prefix : 'Other';
+    }
+
+    // Group by format, then by brand
+    const formats = [
+        { label: '35mm', brands: {} },
+        { label: '120',  brands: {} },
     ];
-    const groupOf = key => FILM[key].format === '120' ? groups[1] : groups[0];
+
     for (let key in FILM) {
         const fs = FILM[key];
         if (!fs.enabled) continue;
-        groupOf(key).keys.push(key);
+        const fmt = fs.format === '120' ? formats[1] : formats[0];
+        const brand = getBrand(key);
+        if (!fmt.brands[brand]) fmt.brands[brand] = [];
+        fmt.brands[brand].push(key);
     }
 
-    for (const { label: groupName, keys } of groups) {
-        if (keys.length === 0) continue;
+    for (const fmt of formats) {
+        const brandKeys = Object.keys(fmt.brands);
+        if (brandKeys.length === 0) continue;
 
-        const header = document.createElement('p');
-        header.textContent = groupName;
-        header.style.cssText = 'width:100%; margin:4px 0 2px; font-size:11px; color:#888; border-bottom:1px solid #888; padding-bottom:2px;';
-        filmstockContainer.appendChild(header);
+        // Format header
+        const fmtHeader = document.createElement('p');
+        fmtHeader.textContent = fmt.label;
+        fmtHeader.style.cssText = 'width:100%; margin:8px 0 2px; font-size:12px; font-weight:bold; color:#888; border-bottom:1px solid #888; padding-bottom:2px;';
+        filmstockContainer.appendChild(fmtHeader);
 
-        const row = document.createElement('div');
-        row.classList.add('filmStockRow');
-
-        for (const key of keys) {
-            const filmstock = FILM[key];
-            const filmstock_el = document.createElement('div');
-            filmstock_el.classList.add('filmstock');
-            if (filmstock.active) filmstock_el.classList.add('active');
-            filmstock_el.id = key;
-            filmstock_el.innerHTML = `
-                <img src="img/filmrolls/${filmstock.icon}" alt="${filmstock.name}">
-                <p>${filmstock.name}</p>
-            `;
-            filmstock_el.addEventListener('click', function() {
-                selectFilmStock(key);
-            });
-            row.appendChild(filmstock_el);
+        // Sort brands in defined order
+        const sortedBrands = BRAND_ORDER.filter(b => fmt.brands[b]);
+        for (const b of brandKeys) {
+            if (!sortedBrands.includes(b)) sortedBrands.push(b);
         }
 
-        filmstockContainer.appendChild(row);
+        for (const brand of sortedBrands) {
+            const keys = fmt.brands[brand];
+            if (!keys) continue;
+
+            // Brand sub-header
+            const brandHeader = document.createElement('p');
+            brandHeader.textContent = BRAND_MAP[brand] || brand;
+            brandHeader.style.cssText = 'width:100%; margin:4px 0 1px; font-size:10px; color:#aaa; padding-left:2px;';
+            filmstockContainer.appendChild(brandHeader);
+
+            const row = document.createElement('div');
+            row.classList.add('filmStockRow');
+
+            for (const key of keys) {
+                const filmstock = FILM[key];
+                const filmstock_el = document.createElement('div');
+                filmstock_el.classList.add('filmstock');
+                if (filmstock.active) filmstock_el.classList.add('active');
+                filmstock_el.id = key;
+                filmstock_el.innerHTML = `
+                    <img src="img/filmrolls/${filmstock.icon}" alt="${filmstock.name}">
+                    <p>${filmstock.name}</p>
+                `;
+                filmstock_el.addEventListener('click', function() {
+                    selectFilmStock(key);
+                });
+                row.appendChild(filmstock_el);
+            }
+
+            filmstockContainer.appendChild(row);
+        }
     }
 }
