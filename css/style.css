@@ -472,8 +472,8 @@ button.p-active {
 
 #filmSelectWindow {
     position: absolute;
-    max-width: 800px;
-    min-width: 400px;
+    max-width: 640px;
+    min-width: 360px;
 }
 
 #contactSheetWindow {
@@ -654,17 +654,25 @@ display: none;
 
 .filmStockSelect {
     /* width: 100%; */
-    overflow-x: scroll;
+    overflow-x: auto;
+    overflow-y: auto;
     white-space: nowrap;
+    max-height: 320px;
 }
 
 .filmStockSelect .filmstock {
     display: inline-block;
     text-align: center;
-    width: 100px;
-    padding-top: 4px;
-    padding-bottom: 4px;
+    width: 72px;
+    padding-top: 2px;
+    padding-bottom: 2px;
     cursor: pointer;
+    vertical-align: top;
+}
+
+.filmStockSelect .filmstock img {
+    width: 56px;
+    height: auto;
 }
 
 .filmStockSelect .filmstock.active {
@@ -675,6 +683,10 @@ display: none;
 .filmStockSelect .filmstock p {
     margin-top: 0;
     margin-bottom: 0;
+    font-size: 10px;
+    line-height: 1.15;
+    white-space: normal;
+    word-break: keep-all;
 }
 
 #filmstripimg {

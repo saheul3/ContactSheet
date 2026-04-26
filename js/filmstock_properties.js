@@ -1865,7 +1865,7 @@ function populateFilmStocks() {
         // Format header
         const fmtHeader = document.createElement('p');
         fmtHeader.textContent = fmt.label;
-        fmtHeader.style.cssText = 'width:100%; margin:8px 0 2px; font-size:12px; font-weight:bold; color:#888; border-bottom:1px solid #888; padding-bottom:2px;';
+        fmtHeader.style.cssText = 'width:100%; margin:4px 0 1px; font-size:11px; font-weight:bold; color:#888; border-bottom:1px solid #888; padding-bottom:1px;';
         filmstockContainer.appendChild(fmtHeader);
 
         // Sort brands in defined order
@@ -1881,7 +1881,7 @@ function populateFilmStocks() {
             // Brand sub-header
             const brandHeader = document.createElement('p');
             brandHeader.textContent = BRAND_MAP[brand] || brand;
-            brandHeader.style.cssText = 'width:100%; margin:4px 0 1px; font-size:10px; color:#aaa; padding-left:2px;';
+            brandHeader.style.cssText = 'width:100%; margin:2px 0 0; font-size:9px; color:#aaa; padding-left:2px;';
             filmstockContainer.appendChild(brandHeader);
 
             const row = document.createElement('div');
