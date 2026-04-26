@@ -474,6 +474,10 @@ button.p-active {
     position: absolute;
     max-width: 720px;
     min-width: 380px;
+    top: 5%;
+    left: 0;
+    right: 0;
+    margin: auto;
 }
 
 #contactSheetWindow {
@@ -653,8 +657,7 @@ display: none;
 } */
 
 .filmStockSelect {
-    overflow-x: auto;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 /* 98.css tablist override – tighter spacing */
@@ -689,6 +692,9 @@ display: none;
 
 .filmStockRow {
     padding: 2px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
 }
 
 .filmStockSelect .filmstock {
