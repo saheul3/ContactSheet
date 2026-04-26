@@ -1824,86 +1824,115 @@ const FILM = {
     },
 }
 
-function populateFilmStocks() {
-    const filmstockContainer = document.getElementById('filmSelect');
-    filmstockContainer.innerHTML = "";
+const FILM_BRAND_MAP = {
+    'fuji':      'Fujifilm',
+    'fomapan':   'Foma',
+    'ilf':       'Ilford',
+    'kentmere':  'Kentmere',
+    'kodak':     'Kodak',
+    'cinestill': 'CineStill',
+};
+const FILM_BRAND_ORDER = ['kodak', 'fuji', 'ilf', 'kentmere', 'fomapan', 'cinestill'];
 
-    const BRAND_MAP = {
-        'fuji':      'Fujifilm',
-        'fomapan':   'Foma',
-        'ilf':       'Ilford',
-        'kentmere':  'Kentmere',
-        'kodak':     'Kodak',
-        'cinestill': 'CineStill',
-    };
-    const BRAND_ORDER = ['fuji', 'kodak', 'ilf', 'kentmere', 'fomapan', 'cinestill'];
+let _filmTabState = null;
+let _selectedFilmKey = null;
 
-    function getBrand(key) {
-        const prefix = key.split('-')[0];
-        return BRAND_MAP[prefix] ? prefix : 'Other';
-    }
-
-    // Group by format, then by brand
-    const formats = [
-        { label: '35mm', brands: {} },
-        { label: '120',  brands: {} },
-    ];
-
+function _filmGroups() {
+    const formats = { '35mm': {}, '120': {} };
     for (let key in FILM) {
         const fs = FILM[key];
         if (!fs.enabled) continue;
-        const fmt = fs.format === '120' ? formats[1] : formats[0];
-        const brand = getBrand(key);
-        if (!fmt.brands[brand]) fmt.brands[brand] = [];
-        fmt.brands[brand].push(key);
+        const fmtKey = fs.format === '120' ? '120' : '35mm';
+        const prefix = key.split('-')[0];
+        const brand = FILM_BRAND_MAP[prefix] ? prefix : 'other';
+        if (!formats[fmtKey][brand]) formats[fmtKey][brand] = [];
+        formats[fmtKey][brand].push(key);
+    }
+    return formats;
+}
+
+function _orderedBrands(formatBrands) {
+    const ordered = FILM_BRAND_ORDER.filter(b => formatBrands[b]);
+    for (const b of Object.keys(formatBrands)) {
+        if (!ordered.includes(b)) ordered.push(b);
+    }
+    return ordered;
+}
+
+function populateFilmStocks() {
+    const container = document.getElementById('filmSelect');
+    container.innerHTML = "";
+
+    const formats = _filmGroups();
+    const availFormats = ['35mm', '120'].filter(f => Object.keys(formats[f]).length > 0);
+    if (availFormats.length === 0) return;
+
+    // Initialize / reconcile tab state
+    if (!_filmTabState || !availFormats.includes(_filmTabState.format)) {
+        _filmTabState = { format: availFormats[0], brand: null };
+    }
+    const brands = _orderedBrands(formats[_filmTabState.format]);
+    if (!_filmTabState.brand || !brands.includes(_filmTabState.brand)) {
+        _filmTabState.brand = brands[0];
     }
 
-    for (const fmt of formats) {
-        const brandKeys = Object.keys(fmt.brands);
-        if (brandKeys.length === 0) continue;
-
-        // Format header
-        const fmtHeader = document.createElement('p');
-        fmtHeader.textContent = fmt.label;
-        fmtHeader.style.cssText = 'width:100%; margin:4px 0 1px; font-size:11px; font-weight:bold; color:#888; border-bottom:1px solid #888; padding-bottom:1px;';
-        filmstockContainer.appendChild(fmtHeader);
-
-        // Sort brands in defined order
-        const sortedBrands = BRAND_ORDER.filter(b => fmt.brands[b]);
-        for (const b of brandKeys) {
-            if (!sortedBrands.includes(b)) sortedBrands.push(b);
-        }
-
-        for (const brand of sortedBrands) {
-            const keys = fmt.brands[brand];
-            if (!keys) continue;
-
-            // Brand sub-header
-            const brandHeader = document.createElement('p');
-            brandHeader.textContent = BRAND_MAP[brand] || brand;
-            brandHeader.style.cssText = 'width:100%; margin:2px 0 0; font-size:9px; color:#aaa; padding-left:2px;';
-            filmstockContainer.appendChild(brandHeader);
-
-            const row = document.createElement('div');
-            row.classList.add('filmStockRow');
-
-            for (const key of keys) {
-                const filmstock = FILM[key];
-                const filmstock_el = document.createElement('div');
-                filmstock_el.classList.add('filmstock');
-                if (filmstock.active) filmstock_el.classList.add('active');
-                filmstock_el.id = key;
-                filmstock_el.innerHTML = `
-                    <img src="img/filmrolls/${filmstock.icon}" alt="${filmstock.name}">
-                    <p>${filmstock.name}</p>
-                `;
-                filmstock_el.addEventListener('click', function() {
-                    selectFilmStock(key);
-                });
-                row.appendChild(filmstock_el);
-            }
-
-            filmstockContainer.appendChild(row);
-        }
+    // Format tabs
+    const formatTabs = document.createElement('menu');
+    formatTabs.setAttribute('role', 'tablist');
+    formatTabs.classList.add('filmFormatTabs');
+    for (const fmt of availFormats) {
+        const li = document.createElement('li');
+        li.setAttribute('role', 'tab');
+        li.setAttribute('aria-selected', _filmTabState.format === fmt ? 'true' : 'false');
+        const a = document.createElement('a');
+        a.href = '#filmSelect';
+        a.textContent = fmt;
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            _filmTabState.format = fmt;
+            _filmTabState.brand = null;
+            populateFilmStocks();
+        });
+        li.appendChild(a);
+        formatTabs.appendChild(li);
     }
+    container.appendChild(formatTabs);
+
+    // Brand tabs
+    const brandRow = document.createElement('div');
+    brandRow.classList.add('filmBrandTabs');
+    for (const b of brands) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = FILM_BRAND_MAP[b] || b;
+        if (_filmTabState.brand === b) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+            _filmTabState.brand = b;
+            populateFilmStocks();
+        });
+        brandRow.appendChild(btn);
+    }
+    container.appendChild(brandRow);
+
+    // Films of active format + brand
+    const keys = formats[_filmTabState.format][_filmTabState.brand] || [];
+    const row = document.createElement('div');
+    row.classList.add('filmStockRow');
+    for (const key of keys) {
+        const filmstock = FILM[key];
+        const el = document.createElement('div');
+        el.classList.add('filmstock');
+        if (_selectedFilmKey === key) el.classList.add('active');
+        el.id = key;
+        el.innerHTML = `
+            <img src="img/filmrolls/${filmstock.icon}" alt="${filmstock.name}">
+            <p>${filmstock.name}</p>
+        `;
+        el.addEventListener('click', function() {
+            _selectedFilmKey = key;
+            selectFilmStock(key);
+        });
+        row.appendChild(el);
+    }
+    container.appendChild(row);
 }

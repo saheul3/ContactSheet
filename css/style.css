@@ -472,8 +472,8 @@ button.p-active {
 
 #filmSelectWindow {
     position: absolute;
-    max-width: 640px;
-    min-width: 360px;
+    max-width: 720px;
+    min-width: 380px;
 }
 
 #contactSheetWindow {
@@ -653,25 +653,56 @@ display: none;
 } */
 
 .filmStockSelect {
-    /* width: 100%; */
     overflow-x: auto;
-    overflow-y: auto;
     white-space: nowrap;
-    max-height: 320px;
+}
+
+/* 98.css tablist override – tighter spacing */
+.filmStockSelect .filmFormatTabs {
+    list-style: none;
+    margin: 0;
+    padding-left: 4px;
+}
+
+.filmStockSelect .filmBrandTabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    background: #c0c0c0;
+    border: 1px inset #fff;
+    padding: 4px;
+    margin-bottom: 4px;
+    white-space: normal;
+}
+
+.filmStockSelect .filmBrandTabs button {
+    font-size: 10px;
+    padding: 2px 8px;
+    min-width: 0;
+}
+
+.filmStockSelect .filmBrandTabs button.active {
+    font-weight: bold;
+    background-color: #d0d0d0;
+    box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff;
+}
+
+.filmStockRow {
+    padding: 2px 0;
 }
 
 .filmStockSelect .filmstock {
     display: inline-block;
     text-align: center;
-    width: 72px;
-    padding-top: 2px;
-    padding-bottom: 2px;
+    width: 88px;
+    padding-top: 4px;
+    padding-bottom: 4px;
     cursor: pointer;
     vertical-align: top;
 }
 
 .filmStockSelect .filmstock img {
-    width: 56px;
+    width: 64px;
     height: auto;
 }
 
@@ -683,8 +714,8 @@ display: none;
 .filmStockSelect .filmstock p {
     margin-top: 0;
     margin-bottom: 0;
-    font-size: 10px;
-    line-height: 1.15;
+    font-size: 11px;
+    line-height: 1.2;
     white-space: normal;
     word-break: keep-all;
 }
