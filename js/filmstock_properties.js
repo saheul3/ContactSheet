@@ -1704,6 +1704,69 @@ const FILM = {
         ],
         'sprocket_hole_color': '#888',
     },
+    'fomapan-100': {
+        'name': 'Fomapan 100',
+        'icon': 'fomapan100_icon.png',
+        'enabled': true,
+        'dx_code': '014102',
+        'bw': true,
+        'start_frame': -1,
+        'top_elements': [
+            {
+                'type': ElementType.LABEL,
+                'text': 'F O M A P A N',
+                'font': FONTS.vcd,
+                'color': '#eee',
+                'height_mm': 2.2,
+                'margin_mm': 0.0,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.1,
+            },
+            {
+                'type': ElementType.LABEL,
+                'text': '1     0     0',
+                'font': FONTS.vcd,
+                'color': '#eee',
+                'height_mm': 2.2,
+                'margin_mm': 0.0,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.58,
+            },
+            {
+                'type': ElementType.LABEL,
+                'text': '3614',
+                'font': FONTS.vcd,
+                'color': '#eee',
+                'height_mm': 1.5,
+                'margin_mm': 0.35,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.85,
+            },
+        ],
+        'bottom_elements': [
+            {
+                'type': ElementType.FRAME_COUNT,
+                'font': FONTS.vcd,
+                'font_style': 'bold',
+                'color': '#eee',
+                'height_mm': 2.5,
+                'margin_mm': -0.15,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.365,
+            },
+            {
+                'type': ElementType.FRAME_COUNT_ALT,
+                'font': FONTS.vcd,
+                'font_style': 'bold',
+                'color': '#eee',
+                'height_mm': 1.6,
+                'margin_mm': 0.2,
+                'repeat': RepeatType.FRAME,
+                'offset': 0.89,
+            },
+        ],
+        'sprocket_hole_color': '#888',
+    },
 }
 
 function populateFilmStocks() {
@@ -1712,12 +1775,13 @@ function populateFilmStocks() {
 
     const BRAND_MAP = {
         'fuji':      'Fujifilm',
+        'fomapan':   'Foma',
         'ilf':       'Ilford',
         'kentmere':  'Kentmere',
         'kodak':     'Kodak',
         'cinestill': 'CineStill',
     };
-    const BRAND_ORDER = ['fuji', 'kodak', 'ilf', 'kentmere', 'cinestill'];
+    const BRAND_ORDER = ['fuji', 'kodak', 'ilf', 'kentmere', 'fomapan', 'cinestill'];
 
     function getBrand(key) {
         const prefix = key.split('-')[0];
