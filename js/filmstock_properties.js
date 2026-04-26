@@ -1831,8 +1831,9 @@ const FILM_BRAND_MAP = {
     'kentmere':  'Kentmere',
     'kodak':     'Kodak',
     'cinestill': 'CineStill',
+    'other':     'Other',
 };
-const FILM_BRAND_ORDER = ['kodak', 'fuji', 'ilf', 'kentmere', 'fomapan', 'cinestill'];
+const FILM_BRAND_ORDER = ['kodak', 'fuji', 'ilf', 'kentmere', 'fomapan', 'cinestill', 'other'];
 
 let _filmTabState = null;
 let _selectedFilmKey = null;
@@ -1935,4 +1936,199 @@ function populateFilmStocks() {
         row.appendChild(el);
     }
     container.appendChild(row);
+}
+
+// ----- Custom film support -----
+
+const CUSTOM_FILMS_STORAGE_KEY = 'contactsheet_custom_films';
+let _customFilmCounter = 0;
+let _editingCustomKey = null;
+
+function _isCustomKey(key) {
+    return typeof key === 'string' && key.startsWith('other-custom-');
+}
+
+function _labelEditableElements(elements) {
+    if (!elements) return [];
+    const out = [];
+    elements.forEach((el, idx) => {
+        if (el && el.type === ElementType.LABEL && typeof el.text === 'string') {
+            out.push({ idx: idx, text: el.text });
+        }
+    });
+    return out;
+}
+
+function loadCustomFilmsFromStorage() {
+    try {
+        const raw = localStorage.getItem(CUSTOM_FILMS_STORAGE_KEY);
+        if (!raw) return;
+        const customs = JSON.parse(raw);
+        for (const key in customs) {
+            FILM[key] = customs[key];
+            const m = key.match(/^other-custom-(\d+)$/);
+            if (m) {
+                const n = parseInt(m[1], 10);
+                if (n > _customFilmCounter) _customFilmCounter = n;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load custom films:', e);
+    }
+}
+
+function saveCustomFilmsToStorage() {
+    const customs = {};
+    for (const key in FILM) {
+        if (_isCustomKey(key)) customs[key] = FILM[key];
+    }
+    try {
+        localStorage.setItem(CUSTOM_FILMS_STORAGE_KEY, JSON.stringify(customs));
+    } catch (e) {
+        console.error('Failed to save custom films:', e);
+    }
+}
+
+function openCustomizeDialog() {
+    _editingCustomKey = null;
+    const select = document.getElementById('customBaseFilm');
+    select.innerHTML = '';
+
+    // Group by format with optgroups
+    const byFmt = { '35mm': [], '120': [] };
+    for (const key in FILM) {
+        if (!FILM[key].enabled) continue;
+        const fmt = FILM[key].format === '120' ? '120' : '35mm';
+        byFmt[fmt].push(key);
+    }
+    for (const fmt of ['35mm', '120']) {
+        if (byFmt[fmt].length === 0) continue;
+        const grp = document.createElement('optgroup');
+        grp.label = fmt;
+        byFmt[fmt].sort((a, b) => FILM[a].name.localeCompare(FILM[b].name));
+        for (const key of byFmt[fmt]) {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = FILM[key].name + (_isCustomKey(key) ? ' (custom)' : '');
+            grp.appendChild(opt);
+        }
+        select.appendChild(grp);
+    }
+
+    // Default base: currently selected film if any, else first
+    if (_selectedFilmKey && FILM[_selectedFilmKey]) {
+        select.value = _selectedFilmKey;
+    }
+    select.onchange = () => loadCustomizeFromBase(select.value);
+    loadCustomizeFromBase(select.value);
+
+    document.getElementById('customizeFilmWindow').classList.remove('hidden');
+}
+
+function loadCustomizeFromBase(baseKey) {
+    const base = FILM[baseKey];
+    if (!base) return;
+
+    if (_isCustomKey(baseKey)) {
+        _editingCustomKey = baseKey;
+        document.getElementById('customDeleteBtn').style.display = '';
+        document.getElementById('customName').value = base.name;
+    } else {
+        _editingCustomKey = null;
+        document.getElementById('customDeleteBtn').style.display = 'none';
+        document.getElementById('customName').value = base.name + ' (Custom)';
+    }
+    document.getElementById('customDxCode').value = base.dx_code || '';
+
+    const container = document.getElementById('customLabelsContainer');
+    container.innerHTML = '';
+
+    const topLabels = _labelEditableElements(base.top_elements);
+    const botLabels = _labelEditableElements(base.bottom_elements);
+
+    function addSection(title, list, position) {
+        if (list.length === 0) return;
+        const h = document.createElement('div');
+        h.textContent = title;
+        h.style.cssText = 'font-weight:bold; font-size:10px; color:#666; margin:2px 0;';
+        container.appendChild(h);
+        list.forEach((lbl) => {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'margin-bottom:3px;';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = lbl.text;
+            input.dataset.position = position;
+            input.dataset.idx = String(lbl.idx);
+            input.style.cssText = 'width:100%; font-size:11px;';
+            wrap.appendChild(input);
+            container.appendChild(wrap);
+        });
+    }
+
+    addSection('Top edge labels', topLabels, 'top');
+    addSection('Bottom edge labels', botLabels, 'bottom');
+
+    if (topLabels.length === 0 && botLabels.length === 0) {
+        const p = document.createElement('p');
+        p.textContent = 'This film has no editable text labels.';
+        p.style.cssText = 'font-size:10px; color:#666; margin:4px;';
+        container.appendChild(p);
+    }
+}
+
+function closeCustomizeDialog() {
+    document.getElementById('customizeFilmWindow').classList.add('hidden');
+}
+
+function saveCustomFilm() {
+    const baseKey = document.getElementById('customBaseFilm').value;
+    const base = FILM[baseKey];
+    if (!base) return;
+
+    // Deep clone base — JSON safe because FILM uses string enums and string fonts
+    const custom = JSON.parse(JSON.stringify(base));
+    custom.name = document.getElementById('customName').value.trim() || 'Custom Film';
+    const dxRaw = document.getElementById('customDxCode').value.trim();
+    custom.dx_code = dxRaw;
+    custom.enabled = true;
+
+    // Apply label text overrides
+    const inputs = document.querySelectorAll('#customLabelsContainer input');
+    inputs.forEach((input) => {
+        const pos = input.dataset.position;
+        const idx = parseInt(input.dataset.idx, 10);
+        const list = pos === 'top' ? custom.top_elements : custom.bottom_elements;
+        if (list && list[idx]) list[idx].text = input.value;
+    });
+
+    let newKey;
+    if (_editingCustomKey && FILM[_editingCustomKey]) {
+        newKey = _editingCustomKey;
+    } else {
+        _customFilmCounter += 1;
+        newKey = `other-custom-${_customFilmCounter}`;
+    }
+    FILM[newKey] = custom;
+
+    saveCustomFilmsToStorage();
+    closeCustomizeDialog();
+
+    // Switch view to Other tab and the saved film
+    _filmTabState = { format: custom.format === '120' ? '120' : '35mm', brand: 'other' };
+    _selectedFilmKey = newKey;
+    populateFilmStocks();
+    selectFilmStock(newKey);
+}
+
+function deleteCustomFilm() {
+    if (!_editingCustomKey || !FILM[_editingCustomKey]) return;
+    if (!confirm(`Delete "${FILM[_editingCustomKey].name}"?`)) return;
+    delete FILM[_editingCustomKey];
+    saveCustomFilmsToStorage();
+    if (_selectedFilmKey === _editingCustomKey) _selectedFilmKey = null;
+    _editingCustomKey = null;
+    closeCustomizeDialog();
+    _filmTabState = null;
+    populateFilmStocks();
 }

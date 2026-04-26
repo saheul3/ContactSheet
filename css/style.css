@@ -480,6 +480,16 @@ button.p-active {
     margin: auto;
 }
 
+#customizeFilmWindow {
+    position: absolute;
+    width: 360px;
+    top: 8%;
+    left: 0;
+    right: 0;
+    margin: auto;
+    z-index: 10;
+}
+
 #contactSheetWindow {
     max-width: 800px;
     position: absolute;

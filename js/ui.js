@@ -81,6 +81,7 @@ function selectFilmStock(select_id) {
 // MARK: js check if document is ready
 function onReady() {
     addUploaderEventListener();
+    loadCustomFilmsFromStorage();
     populateFilmStocks();
 }
 
@@ -96,9 +97,9 @@ if (document.readyState !== 'loading') {
 
 // MARK: interact.js
 const ids = [
-    "welcome", "upload", "uploadProgress", "imagePreviewWindow", 
+    "welcome", "upload", "uploadProgress", "imagePreviewWindow",
     "filmstripPreviewWindow", "contactSheetWindow", "todoWindow", "filmSelectWindow",
-    "errorDialog"
+    "customizeFilmWindow", "errorDialog"
 ];
 
 let window_positions = {};

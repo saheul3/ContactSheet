@@ -118,7 +118,37 @@ layout: default
             <label for="handPlacedCheck" style="font-size:11px;">Hand-placed</label>
         </div>
         <section style="text-align: right; padding-top: 4px;">
+            <button onclick="openCustomizeDialog()" style="float:left;">Customize…</button>
             <button onclick="showFilmstrip()">Continue</button>
+        </section>
+    </div>
+</div>
+
+<div class="window hidden" id="customizeFilmWindow">
+    <div class="title-bar">
+        <div class="title-bar-text">Customize Film</div>
+        <div class="title-bar-controls">
+            <button aria-label="Close" onclick="closeCustomizeDialog()"></button>
+        </div>
+    </div>
+    <div class="window-body" style="font-size:11px;">
+        <div style="margin-bottom:6px;">
+            <label for="customBaseFilm">Base film</label><br>
+            <select id="customBaseFilm" style="width:100%;"></select>
+        </div>
+        <div style="margin-bottom:6px;">
+            <label for="customName">Name</label><br>
+            <input type="text" id="customName" style="width:100%;">
+        </div>
+        <div style="margin-bottom:6px;">
+            <label for="customDxCode">DX code (6 digits)</label><br>
+            <input type="text" id="customDxCode" maxlength="6" style="width:100%;">
+        </div>
+        <div id="customLabelsContainer" style="margin-bottom:6px; max-height:240px; overflow-y:auto; border:1px inset #fff; padding:4px; background:#fff;"></div>
+        <section style="text-align:right; padding-top:4px;">
+            <button id="customDeleteBtn" onclick="deleteCustomFilm()" style="float:left; display:none;">Delete</button>
+            <button onclick="closeCustomizeDialog()">Cancel</button>
+            <button onclick="saveCustomFilm()">Save</button>
         </section>
     </div>
 </div>
