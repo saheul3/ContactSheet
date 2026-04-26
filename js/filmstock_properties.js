@@ -1721,8 +1721,8 @@ const FILM = {
                 'height_mm': 1.9,
                 'margin_mm': 0.2,
                 'repeat': RepeatType.FRAME,
-                'every': 3,
-                'offset': 0.05,
+                'every': 4,
+                'offset': 0.55,
             },
             {
                 'type': ElementType.LABEL,
@@ -1733,8 +1733,8 @@ const FILM = {
                 'height_mm': 1.9,
                 'margin_mm': 0.2,
                 'repeat': RepeatType.FRAME,
-                'every': 3,
-                'offset': 1.05,
+                'every': 4,
+                'offset': 1.95,
             },
             {
                 'type': ElementType.LABEL,
@@ -1745,8 +1745,8 @@ const FILM = {
                 'height_mm': 1.9,
                 'margin_mm': 0.2,
                 'repeat': RepeatType.FRAME,
-                'every': 3,
-                'offset': 2.05,
+                'every': 4,
+                'offset': 3.25,
             },
         ],
         'bottom_elements': [
